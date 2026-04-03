@@ -48,6 +48,13 @@ func (ds *DockerService) StartContainer(ctx context.Context, containerID string)
 	return err
 }
 
+func (ds *DockerService) RemoveContainer(ctx context.Context, containerID string, force bool) error {
+	_, err := ds.client.ContainerRemove(ctx, containerID, docker.ContainerRemoveOptions{
+		Force: force,
+	})
+	return err
+}
+
 func (ds *DockerService) StopContainer(ctx context.Context, containerID string, signal string) error {
 	timeout := 10 // seconds
 	_, err := ds.client.ContainerStop(ctx, containerID, docker.ContainerStopOptions{

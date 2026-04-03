@@ -32,4 +32,5 @@ require (
 	go.opentelemetry.io/otel/metric v1.35.0 // indirect
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
+	libvirt.org/go/libvirt v1.12002.0 // indirect
 )

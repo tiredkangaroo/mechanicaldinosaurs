@@ -38,3 +38,10 @@ type Service struct {
 	Status      string `json:"status"`
 	Contents    string `json:"contents"` // full content of the service file
 }
+
+type VMConfig struct {
+	Name      string `json:"name"`
+	VCPUs     uint   `json:"vcpus"`
+	MemoryMiB uint   `json:"memory_mib"`
+	ISOName   string `json:"iso_name"` // $MECHANICAL_DINOSAURS_DATA/isos/<iso_name>.iso should exist on the server
+}
