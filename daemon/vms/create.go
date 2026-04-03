@@ -1,0 +1,176 @@
+package vms
+
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+
+	"github.com/tiredkangaroo/mechanicaldinosaurs/server"
+	"libvirt.org/go/libvirt"
+)
+
+func CreateVM(config *server.VMConfig) (int, error) {
+	if err := validateConfig(config); err != nil {
+		return 0, fmt.Errorf("invalid VM config: %w", err)
+	}
+
+	// validate that the ISO exists before doing any other work
+	isoPath := filepath.Join(dataDir, "isos", config.ISOName)
+	if _, err := os.Stat(isoPath); err != nil {
+		return 0, fmt.Errorf("iso not found at %s", isoPath)
+	}
+
+	// create qcow2 disk for the VM
+	diskPath := filepath.Join(dataDir, "disks", config.Name+".qcow2")
+	if err := createDisk(diskPath, config.DiskGiB); err != nil {
+		return 0, fmt.Errorf("create disk: %w", err)
+	}
+
+	bridge := dv(config.NetworkBridge, "virbr0") // libvirt's default NAT bridge, unused for now
+
+	// connect to libvirt
+	conn, err := libvirt.NewConnect("qemu:///system")
+	if err != nil {
+		return 0, fmt.Errorf("connect to hypervisor: %w", err)
+	}
+	defer conn.Close()
+
+	// create and define xml
+	xml := buildDomainXML(config, isoPath, diskPath, bridge)
+	domain, err := conn.DomainDefineXML(xml)
+	if err != nil {
+		return 0, fmt.Errorf("define domain: %w", err)
+	}
+
+	if err := domain.Create(); err != nil { // create and start the VM
+		domain.Undefine()
+		os.Remove(diskPath)
+		return 0, fmt.Errorf("start domain: %w", err)
+	}
+
+	xmlDesc, err := domain.GetXMLDesc(0)
+	if err != nil {
+		return 0, fmt.Errorf("get domain XML description: %w", err)
+	}
+	vncPort, err := vncPortFromXML(xmlDesc)
+	if err != nil {
+		return 0, fmt.Errorf("parse VNC port from domain XML: %w", err)
+	}
+
+	return vncPort, nil
+}
+
+// note: bridge is unused
+func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string {
+	return fmt.Sprintf(`
+<domain type='kvm'>
+  <name>%s</name>
+  <memory unit='MiB'>%d</memory>
+  <currentMemory unit='MiB'>%d</currentMemory>
+  <vcpu placement='static'>%d</vcpu>
+
+  <os>
+    <type arch='x86_64' machine='q35'>hvm</type>
+    <boot dev='cdrom'/>
+    <boot dev='hd'/>
+    <bootmenu enable='yes'/>
+  </os>
+
+  <features>
+    <acpi/>  <!-- lets the guest OS respond to shutdown signals -->
+    <apic/>
+  </features>
+
+  <cpu mode='host-passthrough'/>  <!-- best performance; guest sees real CPU -->
+
+  <clock offset='utc'>
+    <timer name='rtc' tickpolicy='catchup'/>
+    <timer name='pit' tickpolicy='delay'/>
+    <timer name='hpet' present='no'/>
+  </clock>
+
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+
+  <devices>
+    <!-- Primary disk (persistent, writable) -->
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2' cache='writeback'/>
+      <source file='%s'/>
+      <target dev='vda' bus='virtio'/>
+    </disk>
+
+    <!-- Boot ISO (read-only cdrom) -->
+    <disk type='file' device='cdrom'>
+      <driver name='qemu' type='raw'/>
+      <source file='%s'/>
+      <target dev='sda' bus='sata'/>
+      <readonly/>
+    </disk>
+
+    <!-- Networking via NAT bridge -->
+    <interface type='network'>
+      <source network='default'/>
+      <model type='virtio'/>
+    </interface>
+
+    <graphics type='vnc' port='-1' autoport='yes' listen='127.0.0.1'>
+      <listen type='address' address='127.0.0.1'/>
+    </graphics>
+    <video>
+      <model type='vga' vram='16384'/>  <!-- vga is broadly compatible -->
+    </video>
+
+    <!-- tablet input fixes mouse cursor alignment in VNC -->
+    <input type='tablet' bus='usb'/>
+
+    <!-- guest agent channel for graceful shutdown -->
+    <channel type='unix'>
+      <target type='virtio' name='org.qemu.guest_agent.0'/>
+    </channel>
+
+    <memballoon model='virtio'/>  <!-- allows runtime memory adjustment -->
+  </devices>
+</domain>`,
+		c.Name,
+		c.MemoryMiB,
+		c.MemoryMiB,
+		c.VCPUs,
+		diskPath,
+		isoPath,
+	)
+}
+
+func createDisk(path string, sizeGiB uint) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return err
+	}
+	// qemu-img must be installed on the host (it's part of qemu-utils i think)
+	cmd := exec.Command("qemu-img", "create", "-f", "qcow2", path, fmt.Sprintf("%dG", sizeGiB))
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("qemu-img create disk: %s: %w", out, err)
+	}
+	return nil
+}
+
+func validateConfig(config *server.VMConfig) error {
+	if len(config.Name) > 32 || !alphanumericRegexp.MatchString(config.Name) {
+		return fmt.Errorf("invalid VM name (should be alphanumeric and less than 32 characters)")
+	}
+	if config.VCPUs < 1 || config.VCPUs > MAX_VCPU {
+		return fmt.Errorf("invalid VM vcpus (should be between 1 and %d, inclusive)", MAX_VCPU)
+	}
+	if config.MemoryMiB < 128 || config.MemoryMiB > MAX_MEMORY_MiB {
+		return fmt.Errorf("invalid VM memory (should be between 128 MiB and %d MiB)", MAX_MEMORY_MiB)
+	}
+	if after, found := strings.CutSuffix(config.ISOName, ".iso"); !found || len(after) == 0 || len(after) > 64 || !alphanumericRegexp.MatchString(after) {
+		return fmt.Errorf("invalid VM ISO name (should be alphanumeric and less than 64 characters)")
+	}
+	if config.DiskGiB < 1 || config.DiskGiB > MAX_DISK_GiB {
+		return fmt.Errorf("invalid VM disk size (should be between 1 GiB and %d GiB)", MAX_DISK_GiB)
+	}
+	return nil
+}
