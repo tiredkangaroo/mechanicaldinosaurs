@@ -139,7 +139,7 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
       <source file='%s'/>
       <target dev='vdb' bus='virtio'/>
       <readonly/>
-	  <boot order='1'/> </disk>
+	  <boot order='1'/>
     </disk>
 
     <!-- Networking via NAT bridge -->
