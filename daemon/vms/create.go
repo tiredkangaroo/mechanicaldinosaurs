@@ -75,12 +75,13 @@ func CreateVM(config *server.VMConfig) (int, error) {
 
 // note: bridge is unused
 func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string {
-	var firmwareAttribute string
+	var firmwareXML string
 	var extraFeatures string
 	if runtime.GOARCH == "arm64" {
 		slog.Info("enabling UEFI firmware and GICv3 for arm64 VM")
 		// for aarch64, we need to specify UEFI firmware
-		firmwareAttribute = `firmware='uefi'`
+		firmwareXML = `<loader readonly='yes' type='pflash'>/usr/share/AAVMF/AAVMF_CODE.fd</loader>
+  	<nvram template='/usr/share/AAVMF/AAVMF_VARS.fd'>/var/lib/libvirt/qemu/nvram/yogurt_VARS.fd</nvram>`
 		// and we need to enable some extra features
 		extraFeatures = `<gic version='3'/>`
 	} else {
@@ -94,7 +95,8 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
   <vcpu placement='static'>%d</vcpu>
 
   <os>
-    <type arch='%s' machine='%s' %s>hvm</type>
+    <type arch='%s' machine='%s'>hvm</type>
+	%s
     <boot dev='cdrom'/>
     <boot dev='hd'/>
     <bootmenu enable='yes'/>
@@ -146,7 +148,7 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
       <listen type='address' address='127.0.0.1'/>
     </graphics>
     <video>
-      <model type='vga' vram='16384'/>  <!-- vga is broadly compatible -->
+      <model type='virtio' vram='16384'/>  <!-- vga is broadly compatible -->
     </video>
 
     <!-- tablet input fixes mouse cursor alignment in VNC -->
@@ -166,7 +168,7 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
 		c.VCPUs,
 		goArchToLibvirtArch[runtime.GOARCH],
 		goArchToMachineType[runtime.GOARCH],
-		firmwareAttribute,
+		firmwareXML,
 		extraFeatures,
 		diskPath,
 		isoPath,
