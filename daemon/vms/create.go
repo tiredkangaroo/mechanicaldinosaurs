@@ -83,6 +83,8 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
 		firmwareAttribute = `firmware='uefi'`
 		// and we need to enable some extra features
 		extraFeatures = `<gic version='3'/>`
+	} else {
+		extraFeatures = "<apic/>" // enables amd apic which is cool if on x86_64
 	}
 	x := fmt.Sprintf(`
 <domain type='kvm'>
@@ -100,7 +102,6 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
 
   <features>
     <acpi/>  <!-- lets the guest OS respond to shutdown signals -->
-    <apic/>
 	%s
   </features>
 
