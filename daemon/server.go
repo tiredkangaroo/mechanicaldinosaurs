@@ -1,18 +1,23 @@
 package main
 
 import (
-	"encoding/json"
-	"log"
+	"fmt"
+
+	"github.com/tiredkangaroo/mechanicaldinosaurs/daemon/vms"
+	"github.com/tiredkangaroo/mechanicaldinosaurs/server"
 )
 
 func main() {
-	serverinfo, err := GetServerInfo()
+	fmt.Println(vms.ListVMs())
+	port, err := vms.CreateVM(&server.VMConfig{
+		Name:      "yogurt",
+		VCPUs:     8,
+		MemoryMiB: 2048,
+		DiskGiB:   1,
+		BootFile:  "ubuntu-25.10-desktop-arm64.iso",
+	})
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("error creating VM:", err)
 	}
-	serverinfoJSON, err := json.Marshal(serverinfo)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Printf("server info: %s", serverinfoJSON)
+	fmt.Println("Created VM on port:", port)
 }

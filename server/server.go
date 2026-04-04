@@ -43,7 +43,12 @@ type VMConfig struct {
 	Name          string `json:"name"`
 	VCPUs         uint   `json:"vcpus"`
 	MemoryMiB     uint   `json:"memory_mib"`
-	ISOName       string `json:"iso_name"`       // $MECHANICAL_DINOSAURS_DATA/isos/<iso_name>.iso should exist on the server
+	BootFile      string `json:"boot_file"`      // $MECHANICAL_DINOSAURS_DATA/boot_files/<boot_file> should exist on the server
 	DiskGiB       uint   `json:"disk_gib"`       // size of the primary qcow2 disk
 	NetworkBridge string `json:"network_bridge"` // e.g. "virbr0" (default NAT bridge)
+}
+
+type VM struct {
+	Config VMConfig `json:"config"`
+	Status string   `json:"status"`
 }

@@ -17,7 +17,7 @@ func CreateVM(config *server.VMConfig) (int, error) {
 	}
 
 	// validate that the ISO exists before doing any other work
-	isoPath := filepath.Join(dataDir, "isos", config.ISOName)
+	isoPath := filepath.Join(dataDir, "boot_files", config.BootFile)
 	if _, err := os.Stat(isoPath); err != nil {
 		return 0, fmt.Errorf("iso not found at %s", isoPath)
 	}
@@ -31,7 +31,7 @@ func CreateVM(config *server.VMConfig) (int, error) {
 	bridge := dv(config.NetworkBridge, "virbr0") // libvirt's default NAT bridge, unused for now
 
 	// connect to libvirt
-	conn, err := libvirt.NewConnect("qemu:///system")
+	conn, err := libvirt.NewConnect("qemu:///session")
 	if err != nil {
 		return 0, fmt.Errorf("connect to hypervisor: %w", err)
 	}
@@ -166,8 +166,9 @@ func validateConfig(config *server.VMConfig) error {
 	if config.MemoryMiB < 128 || config.MemoryMiB > MAX_MEMORY_MiB {
 		return fmt.Errorf("invalid VM memory (should be between 128 MiB and %d MiB)", MAX_MEMORY_MiB)
 	}
-	if after, found := strings.CutSuffix(config.ISOName, ".iso"); !found || len(after) == 0 || len(after) > 64 || !alphanumericRegexp.MatchString(after) {
-		return fmt.Errorf("invalid VM ISO name (should be alphanumeric and less than 64 characters)")
+	// NOTE: right now boot files must be ISOs
+	if after, found := strings.CutSuffix(config.BootFile, ".iso"); !found || len(after) == 0 || len(after) > 64 || !alphanumericRegexp.MatchString(after) {
+		return fmt.Errorf("invalid VM boot file name (should be alphanumeric and less than 64 characters)")
 	}
 	if config.DiskGiB < 1 || config.DiskGiB > MAX_DISK_GiB {
 		return fmt.Errorf("invalid VM disk size (should be between 1 GiB and %d GiB)", MAX_DISK_GiB)
