@@ -74,6 +74,14 @@ func CreateVM(config *server.VMConfig) (int, error) {
 
 // note: bridge is unused
 func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string {
+	var firmwareAttribute string
+	var extraFeatures string
+	if runtime.GOARCH == "arm64" {
+		// for aarch64, we need to specify UEFI firmware
+		firmwareAttribute = `firmware='efi'`
+		// and we need to enable some extra features
+		extraFeatures = `<gic version='3'/>`
+	}
 	return fmt.Sprintf(`
 <domain type='kvm'>
   <name>%s</name>
@@ -82,7 +90,7 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
   <vcpu placement='static'>%d</vcpu>
 
   <os>
-    <type arch='%s' machine='%s'>hvm</type>
+    <type arch='%s' machine='%s' %s>hvm</type>
     <boot dev='cdrom'/>
     <boot dev='hd'/>
     <bootmenu enable='yes'/>
@@ -91,6 +99,7 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
   <features>
     <acpi/>  <!-- lets the guest OS respond to shutdown signals -->
     <apic/>
+	%s
   </features>
 
   <cpu mode='host-passthrough'/>  <!-- best performance; guest sees real CPU -->
@@ -154,6 +163,8 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
 		c.VCPUs,
 		goArchToLibvirtArch[runtime.GOARCH],
 		goArchToMachineType[runtime.GOARCH],
+		firmwareAttribute,
+		extraFeatures,
 		diskPath,
 		isoPath,
 	)
