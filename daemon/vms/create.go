@@ -133,7 +133,7 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
     </disk>
 
     <!-- Boot ISO (read-only cdrom) -->
-    <disk type='file' device='cdrom'>
+    <disk type='file' device='disk'>
       <driver name='qemu' type='raw'/>
       <source file='%s'/>
       <target dev='vdb' bus='virtio'/>
