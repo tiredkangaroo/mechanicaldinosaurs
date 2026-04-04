@@ -103,7 +103,6 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
 
   <devices>
 	<controller type='usb' index='0' model='qemu-xhci'>
-      <address type='pci' domain='0x0000' bus='0x02' slot='0x00' function='0x0'/>
     </controller>
 
     <!-- Primary disk (persistent, writable) -->
