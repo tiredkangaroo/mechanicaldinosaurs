@@ -144,8 +144,8 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
       <model type='virtio'/>
     </interface>
 
-    <graphics type='vnc' port='-1' autoport='yes' listen='127.0.0.1'>
-      <listen type='address' address='127.0.0.1'/>
+    <graphics type='vnc' port='-1' autoport='yes' listen='0.0.0.0'>
+      <listen type='address' address='0.0.0.0'/>
     </graphics>
     <video>
       <model type='virtio' vram='16384'/>  <!-- vga is broadly compatible -->
