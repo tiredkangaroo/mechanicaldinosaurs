@@ -123,7 +123,7 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
 	<controller type='usb' index='0' model='qemu-xhci'>
     </controller>
 	<input type='keyboard' bus='usb'/>
-	<input type='mouse' bus='ps2'/>
+	<input type='mouse' bus='usb'/>
 
     <!-- Primary disk (persistent, writable) -->
     <disk type='file' device='disk'>
