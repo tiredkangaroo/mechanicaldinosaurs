@@ -21,7 +21,7 @@ var alphanumericRegexp = regexp.MustCompile(`^[a-zA-Z0-9-.]*$`) // NOTE: check t
 
 func ListVMs() ([]server.VM, error) {
 	var vms []server.VM
-	conn, err := libvirt.NewConnect("qemu:///session")
+	conn, err := libvirt.NewConnect("qemu:///system")
 	if err != nil {
 		return nil, fmt.Errorf("connect to hypervisor: %w", err)
 	}

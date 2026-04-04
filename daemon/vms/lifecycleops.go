@@ -94,7 +94,7 @@ func GetVMStatus(name string) (string, error) {
 
 // we could probably just have a global libvert conn or a struct that holds it
 func getDomain(name string) (*libvirt.Domain, *libvirt.Connect, error) {
-	conn, err := libvirt.NewConnect("qemu:///session")
+	conn, err := libvirt.NewConnect("qemu:///system")
 	if err != nil {
 		return nil, nil, fmt.Errorf("connect: %w", err)
 	}

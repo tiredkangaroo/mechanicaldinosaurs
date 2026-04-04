@@ -42,7 +42,7 @@ func CreateVM(config *server.VMConfig) (int, error) {
 	bridge := dv(config.NetworkBridge, "virbr0") // libvirt's default NAT bridge, unused for now
 
 	// connect to libvirt
-	conn, err := libvirt.NewConnect("qemu:///session")
+	conn, err := libvirt.NewConnect("qemu:///system")
 	if err != nil {
 		return 0, fmt.Errorf("connect to hypervisor: %w", err)
 	}
