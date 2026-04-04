@@ -79,9 +79,9 @@ func getConfigFromXML(xmlDesc string) (server.VMConfig, error) {
 	var bootISO Disk
 	var primaryDisk Disk
 	for _, disk := range d.Devices.Disks {
-		if disk.Type == "file" && disk.Device == "cdrom" {
+		if disk.Type == "file" && disk.Driver.Type == "raw" {
 			bootISO = disk
-		} else if disk.Type == "file" && disk.Device == "disk" {
+		} else if disk.Type == "file" && disk.Driver.Type == "qcow2" {
 			primaryDisk = disk
 		}
 	}
