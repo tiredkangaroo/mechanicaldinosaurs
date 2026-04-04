@@ -144,7 +144,7 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
       <model type='virtio'/>
     </interface>
 
-    <graphics type='vnc' port='-1' autoport='yes' listen='0.0.0.0'>
+    <graphics type='vnc' port='-1' autoport='yes' listen='0.0.0.0' passwd='password123'>
       <listen type='address' address='0.0.0.0'/>
     </graphics>
     <video>

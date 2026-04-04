@@ -32,8 +32,8 @@ func main() {
 	fmt.Println("-- creating VM --")
 	port, err := vms.CreateVM(&server.VMConfig{
 		Name:      "yogurt",
-		VCPUs:     2,
-		MemoryMiB: 2048,
+		VCPUs:     4,
+		MemoryMiB: 4096,
 		DiskGiB:   1,
 		BootFile:  "ubuntu-25.10-desktop-arm64.iso",
 	})
