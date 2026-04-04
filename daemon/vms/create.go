@@ -130,14 +130,16 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
       <driver name='qemu' type='qcow2' cache='writeback'/>
       <source file='%s'/>
       <target dev='vda' bus='virtio'/>
+	  <boot order='2'/> </disk>
     </disk>
 
-    <!-- Boot ISO (read-only cdrom) -->
+    <!-- Boot ISO -->
     <disk type='file' device='disk'>
       <driver name='qemu' type='raw'/>
       <source file='%s'/>
       <target dev='vdb' bus='virtio'/>
       <readonly/>
+	  <boot order='1'/> </disk>
     </disk>
 
     <!-- Networking via NAT bridge -->
