@@ -15,3 +15,16 @@ it'll have a concept of projects:
 - so if a project has a service, a subdomain, logs, and a deployment to run health checks on, that will be shown inside the project
 
 it's meant to keep everything infra-related one place. it will be on my infra domain mechanicaldinosaurs.net.
+
+# important commands ill need
+
+```
+# also found in /usr/share/libvirt/networks/default.xml
+sudo virsh net-define /etc/libvirt/qemu/networks/default.xml
+sudo virsh net-start default
+sudo virsh net-autostart default
+```
+
+```
+sudo apt-get install libvirt-dev libvirt-clients
+```

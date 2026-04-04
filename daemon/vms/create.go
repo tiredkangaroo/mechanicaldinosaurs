@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strings"
 
 	"github.com/tiredkangaroo/mechanicaldinosaurs/server"
 	"libvirt.org/go/libvirt"
@@ -202,9 +201,9 @@ func validateConfig(config *server.VMConfig) error {
 		return fmt.Errorf("invalid VM memory (should be between 128 MiB and %d MiB)", MAX_MEMORY_MiB)
 	}
 	// NOTE: right now boot files must be ISOs
-	if after, found := strings.CutSuffix(config.BootFile, ".iso"); !found || len(after) == 0 || len(after) > 64 || !alphanumericRegexp.MatchString(after) {
-		return fmt.Errorf("invalid VM boot file name (should be alphanumeric and less than 64 characters)")
-	}
+	// if after, found := strings.CutSuffix(config.BootFile, ".iso"); !found || len(after) == 0 || len(after) > 64 || !alphanumericRegexp.MatchString(after) {
+	// 	return fmt.Errorf("invalid VM boot file name (should be alphanumeric and less than 64 characters)")
+	// }
 	if config.DiskGiB < 1 || config.DiskGiB > MAX_DISK_GiB {
 		return fmt.Errorf("invalid VM disk size (should be between 1 GiB and %d GiB)", MAX_DISK_GiB)
 	}
