@@ -16,12 +16,17 @@ func main() {
 	for _, vm := range virtualMachines {
 		fmt.Printf(
 			"VM: %s, Status: %s, VCPUs: %d, MemoryMiB: %d, BootFile: %s\n",
-			vm.Config.Name, vm.Status, vm.Config.VCPUs, vm.Config.MemoryMiB, vm.Config.BootFile
+			vm.Config.Name, vm.Status, vm.Config.VCPUs, vm.Config.MemoryMiB, vm.Config.BootFile,
 		)
 		fmt.Println("-- stopping VM --")
 		err = vms.StopVM(vm.Config.Name, true) // try graceful shutdown
 		if err != nil {
 			fmt.Println("error stopping VM:", err)
+		}
+		fmt.Println("-- deleting VM --")
+		err = vms.DeleteVM(vm.Config.Name)
+		if err != nil {
+			fmt.Println("error deleting VM:", err)
 		}
 	}
 	fmt.Println("-- creating VM --")
