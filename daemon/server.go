@@ -8,7 +8,23 @@ import (
 )
 
 func main() {
-	fmt.Println(vms.ListVMs())
+	virtualMachines, err := vms.ListVMs()
+	if err != nil {
+		fmt.Println("error listing VMs:", err)
+		return
+	}
+	for _, vm := range virtualMachines {
+		fmt.Printf(
+			"VM: %s, Status: %s, VCPUs: %d, MemoryMiB: %d, BootFile: %s\n",
+			vm.Config.Name, vm.Status, vm.Config.VCPUs, vm.Config.MemoryMiB, vm.Config.BootFile
+		)
+		fmt.Println("-- stopping VM --")
+		err = vms.StopVM(vm.Config.Name, true) // try graceful shutdown
+		if err != nil {
+			fmt.Println("error stopping VM:", err)
+		}
+	}
+	fmt.Println("-- creating VM --")
 	port, err := vms.CreateVM(&server.VMConfig{
 		Name:      "yogurt",
 		VCPUs:     8,

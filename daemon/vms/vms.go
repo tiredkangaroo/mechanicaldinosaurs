@@ -65,8 +65,15 @@ func getConfigFromXML(xmlDesc string) (server.VMConfig, error) {
 	if err := xml.Unmarshal([]byte(xmlDesc), &d); err != nil {
 		return server.VMConfig{}, fmt.Errorf("unmarshal XML: %w", err)
 	}
-	// check memory unit is MiB
-	if d.Memory.Unit != "MiB" {
+	var memoryMiB uint
+	switch d.Memory.Unit {
+	case "KiB":
+		memoryMiB = uint(d.Memory.Value) / 1024
+	case "MiB":
+		memoryMiB = uint(d.Memory.Value)
+	case "GiB":
+		memoryMiB = uint(d.Memory.Value) * 1024
+	default:
 		return server.VMConfig{}, fmt.Errorf("unexpected memory unit in domain XML: %s", d.Memory.Unit)
 	}
 	var bootISO Disk
@@ -84,7 +91,7 @@ func getConfigFromXML(xmlDesc string) (server.VMConfig, error) {
 	return server.VMConfig{
 		Name:      d.Name,
 		VCPUs:     uint(d.VCPU.Value),
-		MemoryMiB: uint(d.Memory.Value),
+		MemoryMiB: memoryMiB,
 		BootFile:  filepath.Base(bootISO.Source.File),
 	}, nil
 }
