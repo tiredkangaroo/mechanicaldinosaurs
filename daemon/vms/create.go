@@ -16,6 +16,10 @@ var goArchToLibvirtArch = map[string]string{
 	"amd64": "x86_64",
 	"arm64": "aarch64",
 }
+var goArchToMachineType = map[string]string{
+	"amd64": "q35",
+	"arm64": "virt",
+}
 
 func CreateVM(config *server.VMConfig) (int, error) {
 	if err := validateConfig(config); err != nil {
@@ -78,7 +82,7 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
   <vcpu placement='static'>%d</vcpu>
 
   <os>
-    <type arch='%s' machine='q35'>hvm</type>
+    <type arch='%s' machine='%s'>hvm</type>
     <boot dev='cdrom'/>
     <boot dev='hd'/>
     <bootmenu enable='yes'/>
@@ -149,6 +153,7 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
 		c.MemoryMiB,
 		c.VCPUs,
 		goArchToLibvirtArch[runtime.GOARCH],
+		goArchToMachineType[runtime.GOARCH],
 		diskPath,
 		isoPath,
 	)
