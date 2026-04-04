@@ -97,8 +97,6 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
   <os>
     <type arch='%s' machine='%s'>hvm</type>
 	%s
-    <boot dev='cdrom'/>
-    <boot dev='hd'/>
     <bootmenu enable='yes'/>
   </os>
 
