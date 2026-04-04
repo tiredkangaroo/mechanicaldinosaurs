@@ -78,6 +78,7 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
 	var extraFeatures string
 	var diskDevPrefix string
 	var diskBus string
+	var bootDiskDevice string
 	if runtime.GOARCH == "arm64" {
 		slog.Info("enabling UEFI firmware and GICv3 for arm64 VM")
 		// for aarch64, we need to specify UEFI firmware
@@ -87,10 +88,12 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
 		extraFeatures = `<gic version='2'/>`
 		diskDevPrefix = "vd"
 		diskBus = "virtio"
+		bootDiskDevice = "disk"
 	} else {
 		extraFeatures = "<apic/>" // enables amd apic which is cool if on x86_64
 		diskDevPrefix = "sd"
 		diskBus = "sata"
+		bootDiskDevice = "cdrom"
 	}
 	x := fmt.Sprintf(`
 <domain type='kvm'>
@@ -137,7 +140,7 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
     </disk>
 
     <!-- Boot ISO -->
-    <disk type='file' device='disk'>
+    <disk type='file' device='%s'>
       <driver name='qemu' type='raw'/>
       <source file='%s'/>
       <target dev='%sb' bus='%s'/>
@@ -180,6 +183,7 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
 		diskPath,
 		diskDevPrefix,
 		diskBus,
+		bootDiskDevice,
 		isoPath,
 		diskDevPrefix,
 		diskBus,
