@@ -83,7 +83,7 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
 		firmwareXML = `<loader readonly='yes' type='pflash'>/usr/share/AAVMF/AAVMF_CODE.fd</loader>
   	<nvram template='/usr/share/AAVMF/AAVMF_VARS.fd'>/var/lib/libvirt/qemu/nvram/yogurt_VARS.fd</nvram>`
 		// and we need to enable some extra features
-		extraFeatures = `<gic version='3'/>`
+		extraFeatures = `<gic version='2'/>`
 	} else {
 		extraFeatures = "<apic/>" // enables amd apic which is cool if on x86_64
 	}

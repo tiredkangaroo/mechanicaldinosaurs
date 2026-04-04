@@ -64,7 +64,7 @@ func DeleteVM(name string) error {
 	_ = domain.Destroy() // best-effort stop; ignore error if already off
 	diskPath := filepath.Join(dataDir, "disks", name+".qcow2")
 	if err := domain.UndefineFlags(libvirt.DOMAIN_UNDEFINE_NVRAM); err != nil {
-		return fmt.Errorf("undefine domain: %w", err)
+		domain.Undefine() // try again without the NVRAM flag in case the domain doesn't have NVRAM defined
 	}
 	return os.Remove(diskPath) // kaboom kablow goes my disk
 }
