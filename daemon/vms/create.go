@@ -84,7 +84,7 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
 		// and we need to enable some extra features
 		extraFeatures = `<gic version='3'/>`
 	}
-	return fmt.Sprintf(`
+	x := fmt.Sprintf(`
 <domain type='kvm'>
   <name>%s</name>
   <memory unit='MiB'>%d</memory>
@@ -170,6 +170,8 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
 		diskPath,
 		isoPath,
 	)
+	os.WriteFile(filepath.Join(dataDir, c.Name+".xml"), []byte(x), 0644) // for debugging
+	return x
 }
 
 func createDisk(path string, sizeGiB uint) error {
