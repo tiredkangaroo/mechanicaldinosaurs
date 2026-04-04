@@ -5,11 +5,17 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/tiredkangaroo/mechanicaldinosaurs/server"
 	"libvirt.org/go/libvirt"
 )
+
+var goArchToLibvirtArch = map[string]string{
+	"amd64": "x86_64",
+	"arm64": "aarch64",
+}
 
 func CreateVM(config *server.VMConfig) (int, error) {
 	if err := validateConfig(config); err != nil {
@@ -72,7 +78,7 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
   <vcpu placement='static'>%d</vcpu>
 
   <os>
-    <type arch='x86_64' machine='q35'>hvm</type>
+    <type arch='%s' machine='q35'>hvm</type>
     <boot dev='cdrom'/>
     <boot dev='hd'/>
     <bootmenu enable='yes'/>
@@ -139,6 +145,7 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
 		c.MemoryMiB,
 		c.MemoryMiB,
 		c.VCPUs,
+		goArchToLibvirtArch[runtime.GOARCH],
 		diskPath,
 		isoPath,
 	)
