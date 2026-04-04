@@ -2,6 +2,7 @@ package vms
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -77,8 +78,9 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
 	var firmwareAttribute string
 	var extraFeatures string
 	if runtime.GOARCH == "arm64" {
+		slog.Info("enabling UEFI firmware and GICv3 for arm64 VM")
 		// for aarch64, we need to specify UEFI firmware
-		firmwareAttribute = `firmware='efi'`
+		firmwareAttribute = `firmware='uefi'`
 		// and we need to enable some extra features
 		extraFeatures = `<gic version='3'/>`
 	}
