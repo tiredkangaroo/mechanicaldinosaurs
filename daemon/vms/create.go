@@ -76,6 +76,8 @@ func CreateVM(config *server.VMConfig) (int, error) {
 func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string {
 	var firmwareXML string
 	var extraFeatures string
+	var diskDevPrefix string
+	var diskBus string
 	if runtime.GOARCH == "arm64" {
 		slog.Info("enabling UEFI firmware and GICv3 for arm64 VM")
 		// for aarch64, we need to specify UEFI firmware
@@ -83,8 +85,12 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
   	<nvram template='/usr/share/AAVMF/AAVMF_VARS.fd'>/var/lib/libvirt/qemu/nvram/yogurt_VARS.fd</nvram>`
 		// and we need to enable some extra features
 		extraFeatures = `<gic version='2'/>`
+		diskDevPrefix = "vd"
+		diskBus = "virtio"
 	} else {
 		extraFeatures = "<apic/>" // enables amd apic which is cool if on x86_64
+		diskDevPrefix = "sd"
+		diskBus = "sata"
 	}
 	x := fmt.Sprintf(`
 <domain type='kvm'>
@@ -126,7 +132,7 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
     <disk type='file' device='disk'>
       <driver name='qemu' type='qcow2' cache='writeback'/>
       <source file='%s'/>
-      <target dev='vda' bus='virtio'/>
+      <target dev='%sa' bus='%s'/>
 	  <boot order='2'/>
     </disk>
 
@@ -134,7 +140,7 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
     <disk type='file' device='disk'>
       <driver name='qemu' type='raw'/>
       <source file='%s'/>
-      <target dev='vdb' bus='virtio'/>
+      <target dev='%sb' bus='%s'/>
       <readonly/>
 	  <boot order='1'/>
     </disk>
@@ -172,7 +178,11 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
 		firmwareXML,
 		extraFeatures,
 		diskPath,
+		diskDevPrefix,
+		diskBus,
 		isoPath,
+		diskDevPrefix,
+		diskBus,
 	)
 	os.WriteFile(filepath.Join(dataDir, c.Name+".xml"), []byte(x), 0644) // for debugging
 	return x
