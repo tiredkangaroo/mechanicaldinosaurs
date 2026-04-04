@@ -122,6 +122,8 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
   <devices>
 	<controller type='usb' index='0' model='qemu-xhci'>
     </controller>
+	<input type='keyboard' bus='usb'/>
+	<input type='mouse' bus='ps2'/>
 
     <!-- Primary disk (persistent, writable) -->
     <disk type='file' device='disk'>
@@ -134,7 +136,7 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
     <disk type='file' device='cdrom'>
       <driver name='qemu' type='raw'/>
       <source file='%s'/>
-      <target dev='sda' bus='sata'/>
+      <target dev='vdb' bus='virtio'/>
       <readonly/>
     </disk>
 
