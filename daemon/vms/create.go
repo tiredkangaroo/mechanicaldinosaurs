@@ -136,7 +136,7 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
       <driver name='qemu' type='qcow2' cache='writeback'/>
       <source file='%s'/>
       <target dev='%sa' bus='%s'/>
-	  <boot order='2'/>
+	  <boot order='1'/>
     </disk>
 
     <!-- Boot ISO -->
@@ -145,7 +145,7 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
       <source file='%s'/>
       <target dev='%sb' bus='%s'/>
       <readonly/>
-	  <boot order='1'/>
+	  <boot order='2'/>
     </disk>
 
     <!-- Networking via NAT bridge -->
