@@ -8,6 +8,16 @@ import (
 	"libvirt.org/go/libvirt"
 )
 
+func StartVM(name string) error {
+	domain, conn, err := getDomain(name)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	return domain.Create() // this should work i think
+}
+
 func StopVM(name string, graceful bool) error {
 	domain, conn, err := getDomain(name)
 	if err != nil {
@@ -37,19 +47,26 @@ func RestartVM(name string, graceful bool) error {
 	return domain.Create()
 }
 
-func UpdateVM(name string, vcpus uint, memoryMiB uint) error {
+func UpdateVM(name string, vcpus uint, memoryMiB uint, storage uint64) error {
 	domain, conn, err := getDomain(name)
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
 
-	// memory can be changed live but vCPUs usually require a reboot unless the guest supports hotplug
-	if err := domain.SetMemory(uint64(memoryMiB) * 1024); err != nil {
-		return fmt.Errorf("set memory: %w", err)
+	if memoryMiB > 0 {
+		// memory can be changed live but vCPUs usually require a reboot unless the guest supports hotplug
+		if err := domain.SetMemory(uint64(memoryMiB) * 1024); err != nil {
+			return fmt.Errorf("set memory: %w", err)
+		}
 	}
-	if err := domain.SetVcpus(vcpus); err != nil {
-		return fmt.Errorf("set vcpus: %w", err)
+	if vcpus > 0 {
+		if err := domain.SetVcpus(vcpus); err != nil {
+			return fmt.Errorf("set vcpus: %w", err)
+		}
+	}
+	if storage > 0 {
+		return fmt.Errorf("updating storage is not supported yet")
 	}
 	return nil
 }

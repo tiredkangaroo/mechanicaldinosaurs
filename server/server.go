@@ -1,8 +1,17 @@
 package server
 
+import "fmt"
+
 type RemoteServer struct {
+	Name     string `json:"name"`
 	Hostport string `json:"hostport"`
 	Secret   string `json:"secret"`
+}
+
+// adding the marshal function to avoid sending secret but also not using - in secret json tag
+// bc we want unmarshal
+func (s *RemoteServer) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf(`{"name":"%s","hostport":"%s"}`, s.Name, s.Hostport)), nil
 }
 
 type Info struct {
@@ -51,4 +60,16 @@ type VMConfig struct {
 type VM struct {
 	Config VMConfig `json:"config"`
 	Status string   `json:"status"`
+}
+
+type ContainerConfig struct {
+	Name          string   `json:"name"`
+	Image         string   `json:"image"`          // e.g. "nginx:latest"
+	ExposedPorts  []string `json:"exposed_ports"`  // list of ports in form "80/tcp", "53/udp", etc.
+	Env           []string `json:"env"`            // list of environment variables in form "KEY=value"
+	Cmd           []string `json:"cmd"`            // command to run in the container on start
+	Volumes       []string `json:"volumes"`        // list of volumes in form "/host/path:/container/path"
+	RestartPolicy string   `json:"restart_policy"` // e.g. "no", "on-failure", "always", "unless-stopped"
+	MaxRetryCount int      `json:"retry_count"`
+	AutoRemove    bool     `json:"auto_remove"` // whether to automatically remove the container when it exits
 }

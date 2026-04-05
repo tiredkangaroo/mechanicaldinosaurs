@@ -47,7 +47,7 @@ func ListVMs() ([]server.VM, error) {
 			slog.Error("get domain XML description", "name", name, "error", err)
 			continue
 		}
-		cfg, err := getConfigFromXML(xmlDesc)
+		cfg, err := GetConfigFromXML(xmlDesc)
 		if err != nil {
 			slog.Error("get config from XML", "name", name, "error", err)
 			continue
@@ -60,7 +60,40 @@ func ListVMs() ([]server.VM, error) {
 	return vms, nil
 }
 
-func getConfigFromXML(xmlDesc string) (server.VMConfig, error) {
+func GetVM(name string) (server.VM, error) {
+	conn, err := libvirt.NewConnect("qemu:///system")
+	if err != nil {
+		return server.VM{}, fmt.Errorf("connect to hypervisor: %w", err)
+	}
+	defer conn.Close()
+
+	domain, err := conn.LookupDomainByName(name)
+	if err != nil {
+		return server.VM{}, fmt.Errorf("lookup domain: %w", err)
+	}
+
+	status, err := GetVMStatus(name)
+	if err != nil {
+		return server.VM{}, fmt.Errorf("get VM status: %w", err)
+	}
+
+	xmlDesc, err := domain.GetXMLDesc(0)
+	if err != nil {
+		return server.VM{}, fmt.Errorf("get domain XML description: %w", err)
+	}
+
+	cfg, err := GetConfigFromXML(xmlDesc)
+	if err != nil {
+		return server.VM{}, fmt.Errorf("get config from XML: %w", err)
+	}
+
+	return server.VM{
+		Config: cfg,
+		Status: status,
+	}, nil
+}
+
+func GetConfigFromXML(xmlDesc string) (server.VMConfig, error) {
 	var d Domain
 	if err := xml.Unmarshal([]byte(xmlDesc), &d); err != nil {
 		return server.VMConfig{}, fmt.Errorf("unmarshal XML: %w", err)

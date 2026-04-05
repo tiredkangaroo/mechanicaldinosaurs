@@ -2,13 +2,24 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"strconv"
+	"strings"
 
+	"github.com/docker/cli/cli/command"
+	"github.com/docker/cli/cli/flags"
+	"github.com/docker/compose/v5/pkg/api"
+	"github.com/docker/compose/v5/pkg/compose"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
 	docker "github.com/moby/moby/client"
+	"github.com/tiredkangaroo/mechanicaldinosaurs/server"
 )
 
 type DockerService struct {
-	client *docker.Client
+	client         *docker.Client
+	composeService api.Compose
 }
 
 func (ds *DockerService) PullImage(ctx context.Context, refStr string, registryAuth string) (io.ReadCloser, error) {
@@ -38,9 +49,66 @@ func (ds *DockerService) RemoveImage(ctx context.Context, refStr string) error {
 	return err
 }
 
-func (ds *DockerService) CreateContainer(ctx context.Context, opts docker.ContainerCreateOptions) (string, error) {
-	resp, err := ds.client.ContainerCreate(ctx, opts)
-	return resp.ID, err
+func (ds *DockerService) ComposeUp(ctx context.Context, name, composeFilePath string) error {
+	proj, err := ds.composeService.LoadProject(ctx, api.ProjectLoadOptions{
+		ConfigPaths: []string{composeFilePath},
+		ProjectName: name,
+	})
+	if err != nil {
+		return fmt.Errorf("load project: %w", err)
+	}
+	return ds.composeService.Up(ctx, proj, api.UpOptions{
+		Create: api.CreateOptions{},
+		Start:  api.StartOptions{},
+	})
+}
+
+func (ds *DockerService) ComposeDown(ctx context.Context, name string) error {
+	return ds.composeService.Down(ctx, name, api.DownOptions{
+		RemoveOrphans: true,
+	})
+}
+
+func (ds *DockerService) CreateContainer(ctx context.Context, config server.ContainerConfig) (string, error) {
+	exposedPorts := make(network.PortSet, len(config.ExposedPorts))
+	for _, port := range config.ExposedPorts {
+		portSplit := strings.Split(port, "/")
+		if len(portSplit) != 2 {
+			return "", fmt.Errorf("invalid port format: %s", port)
+		}
+		n, err := strconv.Atoi(portSplit[0])
+		if err != nil {
+			return "", fmt.Errorf("invalid port number: %s", portSplit[0])
+		}
+		if n < 1 || n > 65535 {
+			return "", fmt.Errorf("port number out of range: %d", n)
+		}
+		p, ok := network.PortFrom(uint16(n), network.IPProtocol(portSplit[1]))
+		if !ok {
+			return "", fmt.Errorf("bad port: %s", port)
+		}
+		exposedPorts[p] = struct{}{}
+	}
+	resp, err := ds.client.ContainerCreate(ctx, docker.ContainerCreateOptions{
+		Config: &container.Config{
+			Image:        config.Image,
+			Env:          config.Env,
+			Cmd:          config.Cmd,
+			ExposedPorts: exposedPorts,
+			// idk how to do volumes here im ngl
+		},
+		HostConfig: &container.HostConfig{
+			RestartPolicy: container.RestartPolicy{
+				Name:              container.RestartPolicyMode(config.RestartPolicy),
+				MaximumRetryCount: config.MaxRetryCount,
+			},
+			AutoRemove: config.AutoRemove,
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+	return resp.ID, nil
 }
 
 func (ds *DockerService) StartContainer(ctx context.Context, containerID string) error {
@@ -90,4 +158,23 @@ func (ds *DockerService) ListContainers(ctx context.Context) ([]docker.Container
 		is = append(is, result)
 	}
 	return is, nil
+}
+
+func NewDockerService() (*DockerService, error) {
+	cli, err := docker.New(docker.FromEnv)
+	if err != nil {
+		return nil, err
+	}
+	dcli, err := command.NewDockerCli()
+	if err != nil {
+		return nil, fmt.Errorf("create Docker CLI: %w", err)
+	}
+	if err := dcli.Initialize(&flags.ClientOptions{}); err != nil {
+		return nil, fmt.Errorf("initialize Docker CLI: %w", err)
+	}
+	composeService, err := compose.NewComposeService(dcli)
+	if err != nil {
+		return nil, fmt.Errorf("create Compose service: %w", err)
+	}
+	return &DockerService{client: cli, composeService: composeService}, nil
 }
