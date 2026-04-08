@@ -31,16 +31,28 @@ func main() {
 func addDockerRoutes(api *echo.Group) error {
 	ds, err := NewDockerService()
 	if err != nil {
-		return err
+		slog.Error("initialize docker service", "error", err)
 	}
-	api.GET("/containers", func(c echo.Context) error {
+	available := err == nil
+	api.GET("/docker/available", func(c echo.Context) error {
+		return c.JSON(200, map[string]any{"available": available, "error": nil})
+	})
+	containerRouter := api.Group("/containers", func(next echo.HandlerFunc) echo.HandlerFunc {
+		if !available {
+			return func(c echo.Context) error {
+				return c.JSON(503, map[string]string{"error": "docker functionality not available on this host"})
+			}
+		}
+		return next
+	})
+	containerRouter.GET("/", func(c echo.Context) error {
 		containers, err := ds.ListContainers(c.Request().Context())
 		if err != nil {
 			return c.JSON(500, map[string]string{"error": err.Error()})
 		}
 		return c.JSON(200, containers)
 	})
-	api.POST("/containers", func(c echo.Context) error {
+	containerRouter.POST("/", func(c echo.Context) error {
 		var req server.ContainerConfig
 		if err := c.Bind(&req); err != nil {
 			return c.JSON(400, map[string]string{"error": "invalid request body"})
@@ -54,7 +66,7 @@ func addDockerRoutes(api *echo.Group) error {
 			"error": nil,
 		})
 	})
-	api.POST("/container/:id/start", func(c echo.Context) error {
+	containerRouter.POST("/:id/start", func(c echo.Context) error {
 		id := c.Param("id")
 		if err := ds.StartContainer(c.Request().Context(), id); err != nil {
 			return c.JSON(500, map[string]string{"error": err.Error()})
@@ -63,7 +75,7 @@ func addDockerRoutes(api *echo.Group) error {
 			"error": nil,
 		})
 	})
-	api.POST("/container/:id/stop", func(c echo.Context) error {
+	containerRouter.POST("/:id/stop", func(c echo.Context) error {
 		id := c.Param("id")
 		if err := ds.StopContainer(c.Request().Context(), id, "SIGTERM"); err != nil {
 			return c.JSON(500, map[string]string{"error": err.Error()})
@@ -72,7 +84,7 @@ func addDockerRoutes(api *echo.Group) error {
 			"error": nil,
 		})
 	})
-	api.DELETE("/container/:id", func(c echo.Context) error {
+	containerRouter.DELETE("/:id", func(c echo.Context) error {
 		id := c.Param("id")
 		if err := ds.RemoveContainer(c.Request().Context(), id, true); err != nil {
 			return c.JSON(500, map[string]string{"error": err.Error()})
@@ -81,7 +93,7 @@ func addDockerRoutes(api *echo.Group) error {
 			"error": nil,
 		})
 	})
-	api.GET("/container/:id/logs", func(c echo.Context) error {
+	containerRouter.GET("/:id/logs", func(c echo.Context) error {
 		id := c.Param("id")
 		logs, err := ds.ContainerLogs(c.Request().Context(), id)
 		if err != nil {
@@ -90,7 +102,18 @@ func addDockerRoutes(api *echo.Group) error {
 		// NOTE: closer??
 		return c.Stream(200, "text/plain", logs)
 	})
-	api.POST("/compose/up", func(c echo.Context) error {
+	// compose routes
+
+	composeRouter := api.Group("/compose", func(next echo.HandlerFunc) echo.HandlerFunc {
+		if !available {
+			return func(c echo.Context) error {
+				return c.JSON(503, map[string]string{"error": "docker functionality not available on this host"})
+			}
+		}
+		return next
+	})
+
+	composeRouter.POST("/up", func(c echo.Context) error {
 		var req struct {
 			ProjectName        string `json:"projectName"`
 			ComposeFileContent string `json:"composeFileContent"`
@@ -114,7 +137,7 @@ func addDockerRoutes(api *echo.Group) error {
 		})
 	})
 	// maybe this should be DELETE /compose/:name
-	api.POST("/compose/down", func(c echo.Context) error {
+	composeRouter.POST("/down", func(c echo.Context) error {
 		var req struct {
 			ProjectName string `json:"projectName"`
 		}
@@ -159,7 +182,7 @@ func addVMRoutes(api *echo.Group) {
 			})
 		}
 	})
-	vmRouter.GET("/vms", func(c echo.Context) error {
+	vmRouter.GET("/", func(c echo.Context) error {
 		machines, err := vms.ListVMs()
 		if err != nil {
 			return c.JSON(500, map[string]string{"error": err.Error()})
@@ -182,7 +205,7 @@ func addVMRoutes(api *echo.Group) {
 		return c.JSON(200, files)
 	})
 
-	vmRouter.POST("/vms", func(c echo.Context) error {
+	vmRouter.POST("/", func(c echo.Context) error {
 		var config server.VMConfig
 		if err := c.Bind(&config); err != nil {
 			return c.JSON(400, map[string]string{"error": "invalid request body"})
@@ -196,7 +219,7 @@ func addVMRoutes(api *echo.Group) {
 		})
 	})
 
-	vmRouter.GET("/vm/:name", func(c echo.Context) error {
+	vmRouter.GET("/:name", func(c echo.Context) error {
 		name := c.Param("name")
 		vm, err := vms.GetVM(name)
 		if err != nil {
@@ -205,7 +228,7 @@ func addVMRoutes(api *echo.Group) {
 		return c.JSON(200, vm)
 	})
 
-	vmRouter.POST("/vm/:name/start", func(c echo.Context) error {
+	vmRouter.POST("/:name/start", func(c echo.Context) error {
 		name := c.Param("name")
 		if err := vms.StartVM(name); err != nil {
 			return c.JSON(500, map[string]string{"error": err.Error()})
@@ -215,7 +238,7 @@ func addVMRoutes(api *echo.Group) {
 		})
 	})
 
-	vmRouter.POST("/vm/:name/stop", func(c echo.Context) error {
+	vmRouter.POST("/:name/stop", func(c echo.Context) error {
 		name := c.Param("name")
 		if err := vms.StopVM(name, true); err != nil {
 			return c.JSON(500, map[string]string{"error": err.Error()})
@@ -225,7 +248,7 @@ func addVMRoutes(api *echo.Group) {
 		})
 	})
 
-	vmRouter.POST("/vm/:name/restart", func(c echo.Context) error {
+	vmRouter.POST("/:name/restart", func(c echo.Context) error {
 		name := c.Param("name")
 		if err := vms.RestartVM(name, true); err != nil {
 			return c.JSON(500, map[string]string{"error": err.Error()})
@@ -235,7 +258,7 @@ func addVMRoutes(api *echo.Group) {
 		})
 	})
 
-	vmRouter.PATCH("/vm/:name", func(c echo.Context) error {
+	vmRouter.PATCH("/:name", func(c echo.Context) error {
 		name := c.Param("name")
 		var req struct {
 			VCPUs      uint   `json:"vcpus,omitempty"`
@@ -253,7 +276,7 @@ func addVMRoutes(api *echo.Group) {
 		})
 	})
 
-	vmRouter.DELETE("/vm/:name", func(c echo.Context) error {
+	vmRouter.DELETE("/:name", func(c echo.Context) error {
 		name := c.Param("name")
 		if err := vms.DeleteVM(name); err != nil {
 			return c.JSON(500, map[string]string{"error": err.Error()})
