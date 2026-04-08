@@ -66,7 +66,7 @@ func UpdateVM(name string, vcpus uint, memoryMiB uint, storage uint64) error {
 		}
 	}
 	if storage > 0 {
-		return fmt.Errorf("updating storage is not supported yet")
+		return fmt.Errorf("updating storage is not supported")
 	}
 	return nil
 }

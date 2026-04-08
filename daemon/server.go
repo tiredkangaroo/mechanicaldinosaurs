@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -131,7 +132,34 @@ func addDockerRoutes(api *echo.Group) error {
 }
 
 func addVMRoutes(api *echo.Group) {
-	api.GET("/vms", func(c echo.Context) error {
+	var available bool
+	var err error
+	available, err = vms.Available()
+	if err != nil {
+		slog.Error("check VM availability", "error", err)
+	}
+	vmRouter := api.Group("/vms", func(next echo.HandlerFunc) echo.HandlerFunc {
+		if !available {
+			return func(c echo.Context) error {
+				return c.JSON(503, map[string]string{"error": "vm functionality not available on this host"})
+			}
+		}
+		return next
+	})
+	api.GET("/vms/available", func(c echo.Context) error {
+		if available {
+			return c.JSON(200, map[string]any{
+				"available": true,
+				"error":     nil,
+			})
+		} else {
+			return c.JSON(200, map[string]any{
+				"available": false,
+				"error":     "vm functionality not available on this host",
+			})
+		}
+	})
+	vmRouter.GET("/vms", func(c echo.Context) error {
 		machines, err := vms.ListVMs()
 		if err != nil {
 			return c.JSON(500, map[string]string{"error": err.Error()})
@@ -139,7 +167,7 @@ func addVMRoutes(api *echo.Group) {
 		return c.JSON(200, machines)
 	})
 
-	api.GET("/available-boot-files", func(c echo.Context) error {
+	vmRouter.GET("/available-boot-files", func(c echo.Context) error {
 		entries, err := os.ReadDir(filepath.Join(MECHANICAL_DINOSAURS_DATA, "boot_files"))
 		if err != nil {
 			return c.JSON(500, map[string]string{"error": err.Error()})
@@ -154,7 +182,7 @@ func addVMRoutes(api *echo.Group) {
 		return c.JSON(200, files)
 	})
 
-	api.POST("/vms", func(c echo.Context) error {
+	vmRouter.POST("/vms", func(c echo.Context) error {
 		var config server.VMConfig
 		if err := c.Bind(&config); err != nil {
 			return c.JSON(400, map[string]string{"error": "invalid request body"})
@@ -168,7 +196,7 @@ func addVMRoutes(api *echo.Group) {
 		})
 	})
 
-	api.GET("/vm/:name", func(c echo.Context) error {
+	vmRouter.GET("/vm/:name", func(c echo.Context) error {
 		name := c.Param("name")
 		vm, err := vms.GetVM(name)
 		if err != nil {
@@ -177,7 +205,7 @@ func addVMRoutes(api *echo.Group) {
 		return c.JSON(200, vm)
 	})
 
-	api.POST("/vm/:name/start", func(c echo.Context) error {
+	vmRouter.POST("/vm/:name/start", func(c echo.Context) error {
 		name := c.Param("name")
 		if err := vms.StartVM(name); err != nil {
 			return c.JSON(500, map[string]string{"error": err.Error()})
@@ -187,7 +215,7 @@ func addVMRoutes(api *echo.Group) {
 		})
 	})
 
-	api.POST("/vm/:name/stop", func(c echo.Context) error {
+	vmRouter.POST("/vm/:name/stop", func(c echo.Context) error {
 		name := c.Param("name")
 		if err := vms.StopVM(name, true); err != nil {
 			return c.JSON(500, map[string]string{"error": err.Error()})
@@ -197,7 +225,7 @@ func addVMRoutes(api *echo.Group) {
 		})
 	})
 
-	api.POST("/vm/:name/restart", func(c echo.Context) error {
+	vmRouter.POST("/vm/:name/restart", func(c echo.Context) error {
 		name := c.Param("name")
 		if err := vms.RestartVM(name, true); err != nil {
 			return c.JSON(500, map[string]string{"error": err.Error()})
@@ -207,7 +235,7 @@ func addVMRoutes(api *echo.Group) {
 		})
 	})
 
-	api.PATCH("/vm/:name", func(c echo.Context) error {
+	vmRouter.PATCH("/vm/:name", func(c echo.Context) error {
 		name := c.Param("name")
 		var req struct {
 			VCPUs      uint   `json:"vcpus,omitempty"`
@@ -225,7 +253,7 @@ func addVMRoutes(api *echo.Group) {
 		})
 	})
 
-	api.DELETE("/vm/:name", func(c echo.Context) error {
+	vmRouter.DELETE("/vm/:name", func(c echo.Context) error {
 		name := c.Param("name")
 		if err := vms.DeleteVM(name); err != nil {
 			return c.JSON(500, map[string]string{"error": err.Error()})

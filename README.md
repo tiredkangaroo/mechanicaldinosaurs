@@ -28,3 +28,5 @@ sudo virsh net-autostart default
 ```
 sudo apt-get install libvirt-dev libvirt-clients
 ```
+
+get the windows virtio drivers here: https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso and put them in as $MECHANICAL_DINOSAURS_DATA/drivers/virtio-win.iso

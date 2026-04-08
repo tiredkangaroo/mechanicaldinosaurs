@@ -1,6 +1,7 @@
 package vms
 
 import (
+	"bytes"
 	"encoding/xml"
 	"fmt"
 	"log/slog"
@@ -8,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 
 	"github.com/tiredkangaroo/mechanicaldinosaurs/server"
 	"libvirt.org/go/libvirt"
@@ -18,6 +20,62 @@ var MAX_DISK_GiB = uint(500)     // NOTE: see above
 var MAX_VCPU = uint(runtime.NumCPU())
 var dataDir = os.Getenv("MECHANICAL_DINOSAURS_DATA")
 var alphanumericRegexp = regexp.MustCompile(`^[a-zA-Z0-9-.]*$`) // NOTE: check this regexp i lowk bs'd it
+
+// available just returns if doing vms is possible.
+func Available() (bool, error) {
+	switch runtime.GOARCH {
+	case "amd64":
+		// since we're on intel/amd we can check /proc/cpuinfo for vmx or svm flags
+		// for hardware virtualization support
+		cpuInfo, err := os.ReadFile("/proc/cpuinfo")
+		if err != nil {
+			return false, fmt.Errorf("read /proc/cpuinfo: %w", err)
+		}
+		// i'm not sure but there's a small chance this has false positives bc we're not actually getting the flags
+		// field but this is good enough
+		if !bytes.Contains(cpuInfo, []byte("vmx")) && !bytes.Contains(cpuInfo, []byte("svm")) {
+			return false, fmt.Errorf("vmx or svm flags not found in /proc/cpuinfo, hardware virtualization support may not be available")
+		}
+	case "arm64":
+	default:
+		return false, fmt.Errorf("unsupported architecture: %s", runtime.GOARCH)
+	}
+
+	if _, err := os.Stat("/dev/kvm"); os.IsNotExist(err) {
+		return false, fmt.Errorf("kvm support not available")
+	}
+
+	conn, err := libvirt.NewConnect("qemu:///system")
+	if err != nil {
+		return false, fmt.Errorf("connect to hypervisor: %w", err)
+	}
+	conn.Close()
+
+	requiredDrivers := []string{
+		"virtio-win.iso", // for windows VMs to have virtio drivers available during installation
+	}
+	drivers := []string{}
+	entries, err := os.ReadDir(filepath.Join(dataDir, "drivers"))
+	if err != nil {
+		return false, fmt.Errorf("read drivers directory: %w", err)
+	}
+	for _, entry := range entries {
+		if err != nil {
+			return false, fmt.Errorf("read drivers directory: %w", err)
+		}
+		if entry.IsDir() {
+			continue
+		}
+		drivers = append(drivers, entry.Name())
+	}
+	for _, required := range requiredDrivers {
+		if !slices.Contains(drivers, required) {
+			return false, fmt.Errorf("required driver %s not found in drivers directory", required)
+		}
+	}
+
+	return true, nil
+}
 
 func ListVMs() ([]server.VM, error) {
 	var vms []server.VM
