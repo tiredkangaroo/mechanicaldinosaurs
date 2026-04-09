@@ -26,6 +26,10 @@ func main() {
 
 	addVMRoutes(api)
 	addDockerRoutes(api)
+	slog.Info("starting server", "port", 6731)
+	if err := e.Start(":6731"); err != nil {
+		slog.Error("server error", "error", err)
+	}
 }
 
 func addDockerRoutes(api *echo.Group) error {
