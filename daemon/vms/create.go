@@ -148,15 +148,25 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
 	  <boot order='2'/>
     </disk>
 
+	<!-- Virtio Windows Drivers -->
+	<disk type='file' device='cdrom'>
+  		<driver name='qemu' type='raw'/>
+  		<source file='%s'/>
+  		<target dev='sdc' bus='sata'/>
+  		<readonly/>
+	</disk>
+
     <!-- Networking via NAT bridge -->
     <interface type='network'>
       <source network='default'/>
       <model type='virtio'/>
     </interface>
 
-    <graphics type='vnc' port='-1' autoport='yes' listen='0.0.0.0' passwd='password'>
+    <graphics type='spice' autoport='yes'>
       <listen type='address' address='0.0.0.0'/>
+	  <image compression='off'/>
     </graphics>
+	<sound model='ich9'/>
     <video>
       <model type='virtio' vram='16384'/>  <!-- vga is broadly compatible -->
     </video>
@@ -187,6 +197,7 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
 		isoPath,
 		diskDevPrefix,
 		diskBus,
+		filepath.Join(dataDir, "drivers", "virtio-win.iso"),
 	)
 	os.WriteFile(filepath.Join(dataDir, c.Name+".xml"), []byte(x), 0644) // for debugging
 	return x

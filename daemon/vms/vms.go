@@ -60,9 +60,6 @@ func Available() (bool, error) {
 		return false, fmt.Errorf("read drivers directory: %w", err)
 	}
 	for _, entry := range entries {
-		if err != nil {
-			return false, fmt.Errorf("read drivers directory: %w", err)
-		}
 		if entry.IsDir() {
 			continue
 		}
