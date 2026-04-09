@@ -6,6 +6,7 @@ require (
 	github.com/docker/cli v29.3.1+incompatible
 	github.com/docker/compose/v5 v5.1.1
 	github.com/labstack/echo/v4 v4.15.1
+	github.com/moby/moby/api v1.54.0
 	github.com/moby/moby/client v0.3.0
 	github.com/shirou/gopsutil/v4 v4.26.2
 	libvirt.org/go/libvirt v1.12002.0
@@ -74,7 +75,6 @@ require (
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/go-archive v0.2.0 // indirect
 	github.com/moby/locker v1.0.1 // indirect
-	github.com/moby/moby/api v1.54.0 // indirect
 	github.com/moby/patternmatcher v0.6.0 // indirect
 	github.com/moby/sys/atomicwriter v0.1.0 // indirect
 	github.com/moby/sys/capability v0.4.0 // indirect
