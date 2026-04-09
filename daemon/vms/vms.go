@@ -142,6 +142,9 @@ func GetVM(name string) (server.VM, error) {
 		return server.VM{}, fmt.Errorf("get config from XML: %w", err)
 	}
 
+	// note: this function needs to populate the size of the disk by getting the primary disk file (boot order 2)
+	// from the config and getting the size of it. idk how to do that but it might be on qemu-img
+
 	return server.VM{
 		Config: cfg,
 		Status: status,
@@ -206,7 +209,7 @@ func vncPortFromXML(xmlDesc string) (int, error) {
 		return 0, err
 	}
 	for _, g := range d.Devices.Graphics {
-		if g.Type == "vnc" && g.Port > 0 {
+		if g.Port > 0 {
 			return g.Port, nil
 		}
 	}
