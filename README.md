@@ -16,6 +16,10 @@ it'll have a concept of projects:
 
 it's meant to keep everything infra-related one place. it will be on my infra domain mechanicaldinosaurs.net.
 
+# what is the daemon?
+
+the daemon runs on the actual machines (pineapple & dragonfruit). it provides the api to get info and make changes (cpu, mem, storage, services, vms, docker, etc.).
+
 # important commands ill need
 
 ```

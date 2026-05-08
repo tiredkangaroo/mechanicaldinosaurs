@@ -30,7 +30,7 @@ func (s Slack) Notify(message string) error {
 	req.Header.Add("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("slack do req: %w")
+		return fmt.Errorf("slack do req: %w", err)
 	}
 	respData, err := io.ReadAll(resp.Body)
 	if err != nil {
