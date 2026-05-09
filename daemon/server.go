@@ -11,10 +11,14 @@ import (
 )
 
 var MECHANICAL_DINOSAURS_DATA = os.Getenv("MECHANICAL_DINOSAURS_DATA")
+var API_SECRET = os.Getenv("API_SECRET")
 
 func main() {
 	e := echo.New()
-	api := e.Group("/api")
+	auth := Auth{
+		Secret: API_SECRET,
+	}
+	api := e.Group("/api", auth.Middleware)
 
 	api.GET("/info", func(c echo.Context) error {
 		info, err := GetServerInfo()
