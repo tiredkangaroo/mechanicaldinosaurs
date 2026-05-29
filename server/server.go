@@ -104,16 +104,20 @@ func Call[Req any, Res any](reqinfo StaticRequestInfo[Req, Res], req Req, author
 	if resp.StatusCode != http.StatusOK {
 		var errResp map[string]string
 		if err := json.NewDecoder(resp.Body).Decode(&errResp); err != nil {
-			if errMessage, ok := errResp["error"]; ok {
-				return nil, errors.New(errMessage)
-			}
 			return nil, fmt.Errorf("request failed with status %d and invalid error response", resp.StatusCode)
+		}
+		if errMessage, ok := errResp["error"]; ok {
+			return nil, errors.New(errMessage)
+		} else {
+			return nil, fmt.Errorf("request failed with status %d and no error message", resp.StatusCode)
 		}
 	}
 
 	var res Res
-	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
-		return nil, err
+	if any(res) != any(struct{}{}) { // only try to decode if response is not empty struct
+		if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+			return nil, err
+		}
 	}
 	return &res, nil
 }
@@ -128,9 +132,8 @@ func Handle[Req any, Res any](group *echo.Group, reqinfo StaticRequestInfo[Req, 
 		if err == nil {
 			return c.JSON(200, res)
 		}
-		switch res := any(err).(type) {
-		case ErrorResponse:
-			return c.JSON(res.Status, map[string]string{"error": res.Message})
+		if errResp, ok := err.(ErrorResponse); ok {
+			return c.JSON(errResp.Status, map[string]string{"error": errResp.Message})
 		}
 		return c.JSON(500, map[string]string{"error": err.Error()})
 	})
