@@ -1,6 +1,15 @@
 package server
 
-import "fmt"
+import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+
+	"github.com/labstack/echo/v4"
+	"github.com/moby/moby/client"
+)
 
 type RemoteServer struct {
 	Name     string `json:"name"`
@@ -72,4 +81,195 @@ type ContainerConfig struct {
 	RestartPolicy string   `json:"restart_policy"` // e.g. "no", "on-failure", "always", "unless-stopped"
 	MaxRetryCount int      `json:"retry_count"`
 	AutoRemove    bool     `json:"auto_remove"` // whether to automatically remove the container when it exits
+}
+
+func Call[Req any, Res any](reqinfo StaticRequestInfo[Req, Res], req Req, authorization string) (*Res, error) {
+	data, err := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	httpReq, err := http.NewRequest(reqinfo.Method, reqinfo.Path, bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Authorization", "Bearer "+authorization)
+
+	resp, err := http.DefaultClient.Do(httpReq)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp map[string]string
+		if err := json.NewDecoder(resp.Body).Decode(&errResp); err != nil {
+			if errMessage, ok := errResp["error"]; ok {
+				return nil, errors.New(errMessage)
+			}
+			return nil, fmt.Errorf("request failed with status %d and invalid error response", resp.StatusCode)
+		}
+	}
+
+	var res Res
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func Handle[Req any, Res any](group *echo.Group, reqinfo StaticRequestInfo[Req, Res], handler func(echo.Context, Req) (*Res, error)) {
+	group.Add(reqinfo.Method, reqinfo.Path, func(c echo.Context) error {
+		var req Req
+		if err := c.Bind(&req); err != nil {
+			return c.JSON(400, map[string]string{"error": "invalid request body"})
+		}
+		res, err := handler(c, req)
+		if err == nil {
+			return c.JSON(200, res)
+		}
+		switch res := any(err).(type) {
+		case ErrorResponse:
+			return c.JSON(res.Status, map[string]string{"error": res.Message})
+		}
+		return c.JSON(500, map[string]string{"error": err.Error()})
+	})
+}
+
+// static request stuff (method & path) but also the request and response types for type safety in handlers and calls
+type StaticRequestInfo[Req any, Res any] struct {
+	Method string
+	Path   string
+}
+
+// erroneous response.
+type ErrorResponse struct {
+	Status  int    `json:"status"`
+	Message string `json:"error"`
+}
+
+func (e ErrorResponse) Error() string {
+	return e.Message
+}
+
+var GetInfoRequest = StaticRequestInfo[struct{}, Info]{
+	Method: "GET",
+	Path:   "/api/info",
+}
+
+// docker
+
+var GetDockerAvailableRequest = StaticRequestInfo[struct{}, struct{}]{
+	Method: "GET",
+	Path:   "/api/docker/available",
+}
+
+var ListContainersRequest = StaticRequestInfo[struct{}, []client.ContainerInspectResult]{
+	Method: "GET",
+	Path:   "/api/containers/list",
+}
+
+type CreateContainerReq struct {
+	ContainerConfig // Embedded from your existing server.ContainerConfig
+}
+
+var CreateContainerRequest = StaticRequestInfo[CreateContainerReq, struct{}]{
+	Method: "POST",
+	Path:   "/api/containers/create",
+}
+
+type ContainerTargetReq struct {
+	ID string `json:"id"`
+}
+
+var StartContainerRequest = StaticRequestInfo[ContainerTargetReq, struct{}]{
+	Method: "POST",
+	Path:   "/api/containers/start",
+}
+var StopContainerRequest = StaticRequestInfo[ContainerTargetReq, struct{}]{
+	Method: "POST",
+	Path:   "/api/containers/stop",
+}
+var RemoveContainerRequest = StaticRequestInfo[ContainerTargetReq, struct{}]{
+	Method: "POST", // Changed from DELETE since path parameters are removed
+	Path:   "/api/containers/remove",
+}
+
+type ComposeUpReq struct {
+	ProjectName        string `json:"projectName"`
+	ComposeFileContent string `json:"composeFileContent"`
+	ComposeFilePath    string `json:"composeFilePath"`
+}
+
+var ComposeUpRequest = StaticRequestInfo[ComposeUpReq, struct{}]{
+	Method: "POST",
+	Path:   "/api/compose/up",
+}
+
+type ComposeDownReq struct {
+	ProjectName string `json:"projectName"`
+}
+
+var ComposeDownRequest = StaticRequestInfo[ComposeDownReq, struct{}]{
+	Method: "POST",
+	Path:   "/api/compose/down",
+}
+
+// vm
+
+var GetVMAvailableRequest = StaticRequestInfo[struct{}, struct{}]{
+	Method: "GET",
+	Path:   "/api/vms/available",
+}
+
+var ListVMsRequest = StaticRequestInfo[struct{}, []VM]{
+	Method: "GET",
+	Path:   "/api/vms/list",
+}
+
+var AvailableBootFilesRequest = StaticRequestInfo[struct{}, []string]{
+	Method: "GET",
+	Path:   "/api/vms/boot-files",
+}
+
+var CreateVMRequest = StaticRequestInfo[VMConfig, struct{}]{
+	Method: "POST",
+	Path:   "/api/vms/create",
+}
+
+type VMTargetReq struct {
+	Name string `json:"name"`
+}
+
+var GetVMRequest = StaticRequestInfo[VMTargetReq, struct{}]{
+	Method: "POST", // uh we send the name in the body. hmm i wonder if this is stupid. anything but grpc tho right
+	Path:   "/api/vms/get",
+}
+var StartVMRequest = StaticRequestInfo[VMTargetReq, struct{}]{
+	Method: "POST",
+	Path:   "/api/vms/start",
+}
+var StopVMRequest = StaticRequestInfo[VMTargetReq, struct{}]{
+	Method: "POST",
+	Path:   "/api/vms/stop",
+}
+var RestartVMRequest = StaticRequestInfo[VMTargetReq, struct{}]{
+	Method: "POST",
+	Path:   "/api/vms/restart",
+}
+var DeleteVMRequest = StaticRequestInfo[VMTargetReq, struct{}]{
+	Method: "POST",
+	Path:   "/api/vms/delete",
+}
+
+type UpdateVMReq struct {
+	Name       string `json:"name"`
+	VCPUs      uint   `json:"vcpus,omitempty"`
+	MemoryMiB  uint   `json:"memoryMiB,omitempty"`
+	StorageGiB uint64 `json:"storageGiB,omitempty"`
+}
+
+var UpdateVMRequest = StaticRequestInfo[UpdateVMReq, struct{}]{
+	Method: "PATCH",
+	Path:   "/api/vms/update",
 }

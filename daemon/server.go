@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/labstack/echo/v4"
+	"github.com/moby/moby/client"
 	"github.com/tiredkangaroo/mechanicaldinosaurs/daemon/vms"
 	"github.com/tiredkangaroo/mechanicaldinosaurs/server"
 )
@@ -15,282 +16,193 @@ var API_SECRET = os.Getenv("API_SECRET")
 
 func main() {
 	e := echo.New()
-	auth := Auth{
-		Secret: API_SECRET,
-	}
-	api := e.Group("/api", auth.Middleware)
+	auth := Auth{Secret: API_SECRET}
+	api := e.Group("", auth.Middleware)
 
-	api.GET("/info", func(c echo.Context) error {
+	server.Handle(api, server.GetInfoRequest, func(c echo.Context, req struct{}) (*server.Info, error) {
 		info, err := GetServerInfo()
 		if err != nil {
-			return c.JSON(500, map[string]string{"error": err.Error()})
+			return nil, err
 		}
-		return c.JSON(200, info)
+		return info, nil
 	})
 
-	addVMRoutes(api)
-	addDockerRoutes(api)
+	registerDockerRoutes(api)
+	registerVMRoutes(api)
+
 	slog.Info("starting server", "port", 6731)
 	if err := e.Start(":6731"); err != nil {
 		slog.Error("server error", "error", err)
 	}
 }
 
-func addDockerRoutes(api *echo.Group) error {
+func registerDockerRoutes(api *echo.Group) {
 	ds, err := NewDockerService()
 	if err != nil {
 		slog.Error("initialize docker service", "error", err)
 	}
 	available := err == nil
-	api.GET("/docker/available", func(c echo.Context) error {
-		return c.JSON(200, map[string]any{"available": available, "error": nil})
-	})
-	containerRouter := api.Group("/containers", func(next echo.HandlerFunc) echo.HandlerFunc {
-		if !available {
-			return func(c echo.Context) error {
+
+	dockerRouter := api.Group("", func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			if !available {
 				return c.JSON(503, map[string]string{"error": "docker functionality not available on this host"})
 			}
+			return next(c)
 		}
-		return next
 	})
-	containerRouter.GET("/", func(c echo.Context) error {
+
+	server.Handle(dockerRouter, server.GetDockerAvailableRequest, func(c echo.Context, req struct{}) (*struct{}, error) {
+		return nil, nil // middleware handles the response based on availability, so just return success here
+	})
+
+	server.Handle(dockerRouter, server.ListContainersRequest, func(c echo.Context, req struct{}) (*[]client.ContainerInspectResult, error) {
 		containers, err := ds.ListContainers(c.Request().Context())
 		if err != nil {
-			return c.JSON(500, map[string]string{"error": err.Error()})
+			return nil, err
 		}
-		return c.JSON(200, containers)
-	})
-	containerRouter.POST("/", func(c echo.Context) error {
-		var req server.ContainerConfig
-		if err := c.Bind(&req); err != nil {
-			return c.JSON(400, map[string]string{"error": "invalid request body"})
-		}
-		id, err := ds.CreateContainer(c.Request().Context(), req)
-		if err != nil {
-			return c.JSON(500, map[string]string{"error": err.Error()})
-		}
-		return c.JSON(201, map[string]any{
-			"id":    id,
-			"error": nil,
-		})
-	})
-	containerRouter.POST("/:id/start", func(c echo.Context) error {
-		id := c.Param("id")
-		if err := ds.StartContainer(c.Request().Context(), id); err != nil {
-			return c.JSON(500, map[string]string{"error": err.Error()})
-		}
-		return c.JSON(200, map[string]any{
-			"error": nil,
-		})
-	})
-	containerRouter.POST("/:id/stop", func(c echo.Context) error {
-		id := c.Param("id")
-		if err := ds.StopContainer(c.Request().Context(), id, "SIGTERM"); err != nil {
-			return c.JSON(500, map[string]string{"error": err.Error()})
-		}
-		return c.JSON(200, map[string]any{
-			"error": nil,
-		})
-	})
-	containerRouter.DELETE("/:id", func(c echo.Context) error {
-		id := c.Param("id")
-		if err := ds.RemoveContainer(c.Request().Context(), id, true); err != nil {
-			return c.JSON(500, map[string]string{"error": err.Error()})
-		}
-		return c.JSON(200, map[string]any{
-			"error": nil,
-		})
-	})
-	containerRouter.GET("/:id/logs", func(c echo.Context) error {
-		id := c.Param("id")
-		logs, err := ds.ContainerLogs(c.Request().Context(), id)
-		if err != nil {
-			return c.JSON(500, map[string]string{"error": err.Error()})
-		}
-		// NOTE: closer??
-		return c.Stream(200, "text/plain", logs)
-	})
-	// compose routes
-
-	composeRouter := api.Group("/compose", func(next echo.HandlerFunc) echo.HandlerFunc {
-		if !available {
-			return func(c echo.Context) error {
-				return c.JSON(503, map[string]string{"error": "docker functionality not available on this host"})
-			}
-		}
-		return next
+		return &containers, nil
 	})
 
-	composeRouter.POST("/up", func(c echo.Context) error {
-		var req struct {
-			ProjectName        string `json:"projectName"`
-			ComposeFileContent string `json:"composeFileContent"`
-			ComposeFilePath    string `json:"composeFilePath"`
+	server.Handle(dockerRouter, server.CreateContainerRequest, func(c echo.Context, req server.CreateContainerReq) (*struct{}, error) {
+		_, err := ds.CreateContainer(c.Request().Context(), req.ContainerConfig)
+		if err != nil {
+			return nil, err
 		}
-		if err := c.Bind(&req); err != nil {
-			return c.JSON(400, map[string]string{"error": "invalid request body"})
+		return nil, nil
+	})
+
+	server.Handle(dockerRouter, server.StartContainerRequest, func(c echo.Context, req server.ContainerTargetReq) (*struct{}, error) {
+		if err := ds.StartContainer(c.Request().Context(), req.ID); err != nil {
+			return nil, err
 		}
+		return nil, nil
+	})
+
+	server.Handle(dockerRouter, server.StopContainerRequest, func(c echo.Context, req server.ContainerTargetReq) (*struct{}, error) {
+		if err := ds.StopContainer(c.Request().Context(), req.ID, "SIGTERM"); err != nil {
+			return nil, err
+		}
+		return nil, nil
+	})
+
+	server.Handle(dockerRouter, server.RemoveContainerRequest, func(c echo.Context, req server.ContainerTargetReq) (*struct{}, error) {
+		if err := ds.RemoveContainer(c.Request().Context(), req.ID, true); err != nil {
+			return nil, err
+		}
+		return nil, nil
+	})
+
+	server.Handle(dockerRouter, server.ComposeUpRequest, func(c echo.Context, req server.ComposeUpReq) (*struct{}, error) {
 		if req.ComposeFilePath == "" {
-			err := os.WriteFile(filepath.Join(MECHANICAL_DINOSAURS_DATA, "docker_compose_files", req.ProjectName+".yaml"), []byte(req.ComposeFileContent), 0644)
-			if err != nil {
-				return c.JSON(500, map[string]string{"error": err.Error()})
-			}
 			req.ComposeFilePath = filepath.Join(MECHANICAL_DINOSAURS_DATA, "docker_compose_files", req.ProjectName+".yaml")
+			if err := os.WriteFile(req.ComposeFilePath, []byte(req.ComposeFileContent), 0644); err != nil {
+				return nil, err
+			}
 		}
 		if err := ds.ComposeUp(c.Request().Context(), req.ProjectName, req.ComposeFilePath); err != nil {
-			return c.JSON(500, map[string]string{"error": err.Error()})
+			return nil, err
 		}
-		return c.JSON(200, map[string]any{
-			"error": nil,
-		})
+		return nil, nil
 	})
-	// maybe this should be DELETE /compose/:name
-	composeRouter.POST("/down", func(c echo.Context) error {
-		var req struct {
-			ProjectName string `json:"projectName"`
-		}
-		if err := c.Bind(&req); err != nil {
-			return c.JSON(400, map[string]string{"error": "invalid request body"})
-		}
+
+	server.Handle(dockerRouter, server.ComposeDownRequest, func(c echo.Context, req server.ComposeDownReq) (*struct{}, error) {
 		if err := ds.ComposeDown(c.Request().Context(), req.ProjectName); err != nil {
-			return c.JSON(500, map[string]string{"error": err.Error()})
+			return nil, err
 		}
-		return c.JSON(200, map[string]any{
-			"error": nil,
-		})
+		return nil, nil
 	})
-	return nil
 }
 
-func addVMRoutes(api *echo.Group) {
-	var available bool
-	var err error
-	available, err = vms.Available()
+func registerVMRoutes(api *echo.Group) {
+	available, err := vms.Available()
 	if err != nil {
 		slog.Error("check VM availability", "error", err)
 	}
-	vmRouter := api.Group("/vms", func(next echo.HandlerFunc) echo.HandlerFunc {
-		if !available {
-			return func(c echo.Context) error {
+
+	vmRouter := api.Group("", func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			if !available {
 				return c.JSON(503, map[string]string{"error": "vm functionality not available on this host"})
 			}
+			return next(c)
 		}
-		return next
-	})
-	api.GET("/vms/available", func(c echo.Context) error {
-		if available {
-			return c.JSON(200, map[string]any{
-				"available": true,
-				"error":     nil,
-			})
-		} else {
-			return c.JSON(200, map[string]any{
-				"available": false,
-				"error":     "vm functionality not available on this host",
-			})
-		}
-	})
-	vmRouter.GET("/", func(c echo.Context) error {
-		machines, err := vms.ListVMs()
-		if err != nil {
-			return c.JSON(500, map[string]string{"error": err.Error()})
-		}
-		return c.JSON(200, machines)
 	})
 
-	vmRouter.GET("/available-boot-files", func(c echo.Context) error {
+	server.Handle(vmRouter, server.GetVMAvailableRequest, func(c echo.Context, req struct{}) (*struct{}, error) {
+		return nil, nil // middleware handles here
+	})
+
+	server.Handle(vmRouter, server.ListVMsRequest, func(c echo.Context, req struct{}) (*[]server.VM, error) {
+		machines, err := vms.ListVMs()
+		if err != nil {
+			return nil, err
+		}
+		return &machines, nil
+	})
+
+	server.Handle(vmRouter, server.AvailableBootFilesRequest, func(c echo.Context, req struct{}) (*[]string, error) {
 		entries, err := os.ReadDir(filepath.Join(MECHANICAL_DINOSAURS_DATA, "boot_files"))
 		if err != nil {
-			return c.JSON(500, map[string]string{"error": err.Error()})
+			return nil, err
 		}
 		var files []string
 		for _, entry := range entries {
-			if entry.IsDir() { // shouldn't be any dirs in boot_files but just in case
-				continue
+			if !entry.IsDir() {
+				files = append(files, entry.Name())
 			}
-			files = append(files, entry.Name())
 		}
-		return c.JSON(200, files)
+		return &files, nil
 	})
 
-	vmRouter.POST("/", func(c echo.Context) error {
-		var config server.VMConfig
-		if err := c.Bind(&config); err != nil {
-			return c.JSON(400, map[string]string{"error": "invalid request body"})
-		}
-		_, err := vms.CreateVM(&config)
+	server.Handle(vmRouter, server.CreateVMRequest, func(c echo.Context, req server.VMConfig) (*struct{}, error) {
+		_, err := vms.CreateVM(&req)
 		if err != nil {
-			return c.JSON(500, map[string]string{"error": err.Error()})
+			return nil, err
 		}
-		return c.JSON(201, map[string]any{
-			"error": nil,
-		})
+		return nil, nil
 	})
 
-	vmRouter.GET("/:name", func(c echo.Context) error {
-		name := c.Param("name")
-		vm, err := vms.GetVM(name)
+	server.Handle(vmRouter, server.GetVMRequest, func(c echo.Context, req server.VMTargetReq) (*struct{}, error) {
+		_, err := vms.GetVM(req.Name)
 		if err != nil {
-			return c.JSON(404, map[string]string{"error": err.Error()})
+			return nil, err
 		}
-		return c.JSON(200, vm)
+		return nil, nil
 	})
 
-	vmRouter.POST("/:name/start", func(c echo.Context) error {
-		name := c.Param("name")
-		if err := vms.StartVM(name); err != nil {
-			return c.JSON(500, map[string]string{"error": err.Error()})
+	server.Handle(vmRouter, server.StartVMRequest, func(c echo.Context, req server.VMTargetReq) (*struct{}, error) {
+		if err := vms.StartVM(req.Name); err != nil {
+			return nil, err
 		}
-		return c.JSON(200, map[string]any{
-			"error": nil,
-		})
+		return nil, nil
 	})
 
-	vmRouter.POST("/:name/stop", func(c echo.Context) error {
-		name := c.Param("name")
-		if err := vms.StopVM(name, true); err != nil {
-			return c.JSON(500, map[string]string{"error": err.Error()})
+	server.Handle(vmRouter, server.StopVMRequest, func(c echo.Context, req server.VMTargetReq) (*struct{}, error) {
+		if err := vms.StopVM(req.Name, true); err != nil {
+			return nil, err
 		}
-		return c.JSON(200, map[string]any{
-			"error": nil,
-		})
+		return nil, nil
 	})
 
-	vmRouter.POST("/:name/restart", func(c echo.Context) error {
-		name := c.Param("name")
-		if err := vms.RestartVM(name, true); err != nil {
-			return c.JSON(500, map[string]string{"error": err.Error()})
+	server.Handle(vmRouter, server.RestartVMRequest, func(c echo.Context, req server.VMTargetReq) (*struct{}, error) {
+		if err := vms.RestartVM(req.Name, true); err != nil {
+			return nil, err
 		}
-		return c.JSON(200, map[string]any{
-			"error": nil,
-		})
+		return nil, nil
 	})
 
-	vmRouter.PATCH("/:name", func(c echo.Context) error {
-		name := c.Param("name")
-		var req struct {
-			VCPUs      uint   `json:"vcpus,omitempty"`
-			MemoryMiB  uint   `json:"memoryMiB,omitempty"`
-			StorageGiB uint64 `json:"storageGiB,omitempty"`
+	server.Handle(vmRouter, server.UpdateVMRequest, func(c echo.Context, req server.UpdateVMReq) (*struct{}, error) {
+		if err := vms.UpdateVM(req.Name, req.VCPUs, req.MemoryMiB, req.StorageGiB); err != nil {
+			return nil, err
 		}
-		if err := c.Bind(&req); err != nil {
-			return c.JSON(400, map[string]string{"error": "invalid request body"})
-		}
-		if err := vms.UpdateVM(name, req.VCPUs, req.MemoryMiB, req.StorageGiB); err != nil {
-			return c.JSON(500, map[string]string{"error": err.Error()})
-		}
-		return c.JSON(200, map[string]any{
-			"error": nil,
-		})
+		return nil, nil
 	})
 
-	vmRouter.DELETE("/:name", func(c echo.Context) error {
-		name := c.Param("name")
-		if err := vms.DeleteVM(name); err != nil {
-			return c.JSON(500, map[string]string{"error": err.Error()})
+	server.Handle(vmRouter, server.DeleteVMRequest, func(c echo.Context, req server.VMTargetReq) (*struct{}, error) {
+		if err := vms.DeleteVM(req.Name); err != nil {
+			return nil, err
 		}
-		return c.JSON(200, map[string]any{
-			"error": nil,
-		})
+		return nil, nil
 	})
 }
