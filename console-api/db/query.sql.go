@@ -24,6 +24,36 @@ func (q *Queries) AddRemoteServer(ctx context.Context, arg AddRemoteServerParams
 	return err
 }
 
+const addUser = `-- name: AddUser :exec
+INSERT INTO users (name, active, superuser, totp_secret) VALUES (?, ?, ?, ?)
+`
+
+type AddUserParams struct {
+	Name       string `json:"name"`
+	Active     bool   `json:"active"`
+	Superuser  bool   `json:"superuser"`
+	TotpSecret string `json:"totp_secret"`
+}
+
+func (q *Queries) AddUser(ctx context.Context, arg AddUserParams) error {
+	_, err := q.db.ExecContext(ctx, addUser,
+		arg.Name,
+		arg.Active,
+		arg.Superuser,
+		arg.TotpSecret,
+	)
+	return err
+}
+
+const deactivateUser = `-- name: DeactivateUser :exec
+UPDATE users SET active = false WHERE name = ?
+`
+
+func (q *Queries) DeactivateUser(ctx context.Context, name string) error {
+	_, err := q.db.ExecContext(ctx, deactivateUser, name)
+	return err
+}
+
 const deleteRemoteServer = `-- name: DeleteRemoteServer :exec
 DELETE FROM remote_servers WHERE name = ?
 `
@@ -44,6 +74,22 @@ func (q *Queries) GetRemoteServer(ctx context.Context, name string) (RemoteServe
 	return i, err
 }
 
+const getUser = `-- name: GetUser :one
+SELECT name, active, superuser, totp_secret FROM users WHERE name = ?
+`
+
+func (q *Queries) GetUser(ctx context.Context, name string) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUser, name)
+	var i User
+	err := row.Scan(
+		&i.Name,
+		&i.Active,
+		&i.Superuser,
+		&i.TotpSecret,
+	)
+	return i, err
+}
+
 const listRemoteServers = `-- name: ListRemoteServers :many
 SELECT name, hostport, secret FROM remote_servers
 `
@@ -58,6 +104,38 @@ func (q *Queries) ListRemoteServers(ctx context.Context) ([]RemoteServer, error)
 	for rows.Next() {
 		var i RemoteServer
 		if err := rows.Scan(&i.Name, &i.Hostport, &i.Secret); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUsers = `-- name: ListUsers :many
+SELECT name, active, superuser, totp_secret FROM users
+`
+
+func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, listUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.Name,
+			&i.Active,
+			&i.Superuser,
+			&i.TotpSecret,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

@@ -9,3 +9,10 @@ type RemoteServer struct {
 	Hostport string `json:"hostport"`
 	Secret   string `json:"secret"`
 }
+
+type User struct {
+	Name       string `json:"name"`
+	Active     bool   `json:"active"`
+	Superuser  bool   `json:"superuser"`
+	TotpSecret string `json:"totp_secret"`
+}
