@@ -14,9 +14,9 @@ INSERT INTO remote_servers (name, hostport, secret) VALUES (?, ?, ?)
 `
 
 type AddRemoteServerParams struct {
-	Name     string
-	Hostport string
-	Secret   string
+	Name     string `json:"name"`
+	Hostport string `json:"hostport"`
+	Secret   string `json:"secret"`
 }
 
 func (q *Queries) AddRemoteServer(ctx context.Context, arg AddRemoteServerParams) error {
@@ -76,10 +76,10 @@ UPDATE remote_servers SET name = ?, hostport = ?, secret = ? WHERE name = ?
 `
 
 type UpdateRemoteServerParams struct {
-	Name     string
-	Hostport string
-	Secret   string
-	Name_2   string
+	Name     string `json:"name"`
+	Hostport string `json:"hostport"`
+	Secret   string `json:"secret"`
+	Name_2   string `json:"name_2"`
 }
 
 func (q *Queries) UpdateRemoteServer(ctx context.Context, arg UpdateRemoteServerParams) error {

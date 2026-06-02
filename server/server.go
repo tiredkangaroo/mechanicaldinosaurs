@@ -11,18 +11,6 @@ import (
 	"github.com/moby/moby/client"
 )
 
-type RemoteServer struct {
-	Name     string `json:"name"`
-	Hostport string `json:"hostport"`
-	Secret   string `json:"secret"`
-}
-
-// adding the marshal function to avoid sending secret but also not using - in secret json tag
-// bc we want unmarshal
-func (s *RemoteServer) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf(`{"name":"%s","hostport":"%s"}`, s.Name, s.Hostport)), nil
-}
-
 type Info struct {
 	// host info
 	OS        string `json:"os"`
@@ -83,12 +71,13 @@ type ContainerConfig struct {
 	AutoRemove    bool     `json:"auto_remove"` // whether to automatically remove the container when it exits
 }
 
-func Call[Req any, Res any](reqinfo StaticRequestInfo[Req, Res], req Req, authorization string) (*Res, error) {
+func Call[Req any, Res any](reqinfo StaticRequestInfo[Req, Res], hostport string, req Req, authorization string) (*Res, error) {
 	data, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
-	httpReq, err := http.NewRequest(reqinfo.Method, reqinfo.Path, bytes.NewReader(data))
+	// NOTE: certs when??
+	httpReq, err := http.NewRequest(reqinfo.Method, "http://"+hostport+reqinfo.Path, bytes.NewReader(data))
 	if err != nil {
 		return nil, err
 	}
@@ -276,3 +265,5 @@ var UpdateVMRequest = StaticRequestInfo[UpdateVMReq, struct{}]{
 	Method: "PATCH",
 	Path:   "/api/vms/update",
 }
+
+var NoRequestData = struct{}{}

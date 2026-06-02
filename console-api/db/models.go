@@ -5,7 +5,7 @@
 package db
 
 type RemoteServer struct {
-	Name     string
-	Hostport string
-	Secret   string
+	Name     string `json:"name"`
+	Hostport string `json:"hostport"`
+	Secret   string `json:"secret"`
 }
