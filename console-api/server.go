@@ -64,8 +64,19 @@ func main() {
 	addAuthRoutes(api, db)
 	addMachineRoutes(api, db)
 
-	// NOTE: allow for certs
-	app.Start(":" + PORT)
+	if DefaultConfig.CERT_PATH == "" || DefaultConfig.KEY_PATH == "" {
+		slog.Warn("no tls certificate or key provided, starting server without tls")
+		if err := app.Start(":" + PORT); err != nil {
+			slog.Error("server", "error", err)
+			return
+		}
+	} else {
+		slog.Info("starting server with tls", "cert", DefaultConfig.CERT_PATH, "key", DefaultConfig.KEY_PATH)
+		if err := app.StartTLS(":"+PORT, DefaultConfig.CERT_PATH, DefaultConfig.KEY_PATH); err != nil {
+			slog.Error("server", "error", err)
+			return
+		}
+	}
 }
 
 type MachineWithStatus struct {
