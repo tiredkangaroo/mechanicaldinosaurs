@@ -59,7 +59,7 @@ func main() {
 
 	api := app.Group("/api")
 
-	api.Use(createAuthMiddleware(db))
+	// api.Use(createAuthMiddleware(db))
 
 	addAuthRoutes(api, db)
 	addMachineRoutes(api, db)
