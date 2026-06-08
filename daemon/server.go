@@ -11,9 +11,6 @@ import (
 	"github.com/tiredkangaroo/mechanicaldinosaurs/server"
 )
 
-var MECHANICAL_DINOSAURS_DATA = os.Getenv("MECHANICAL_DINOSAURS_DATA")
-var API_SECRET = os.Getenv("API_SECRET")
-
 func main() {
 	e := echo.New()
 	auth := Auth{Secret: API_SECRET}
