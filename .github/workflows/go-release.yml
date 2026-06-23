@@ -64,18 +64,17 @@ jobs:
 
       - name: Build and zip for ${{ matrix.goos }}/${{ matrix.goarch }}
         run: |
-          mkdir -p builds
+          # Define paths relative to the project root workspace
+          WORKSPACE_ROOT=$(pwd)
+          build_dir="${WORKSPACE_ROOT}/builds/md-daemon-${{ matrix.goos }}-${{ matrix.goarch }}"
           output_name="md-daemon"
           renamed_binary="md-daemon-${{ matrix.goos }}-${{ matrix.goarch }}"
-          build_dir="builds/md-daemon-${{ matrix.goos }}-${{ matrix.goarch }}"
-          binary_path="${build_dir}/${output_name}"
-          renamed_path="${build_dir}/${renamed_binary}"
 
           mkdir -p "$build_dir"
 
           echo "Building for ${{ matrix.goos }}/${{ matrix.goarch }}..."
-          cd daemon
 
+          # Handle cross-compilation environment flags
           if [ "${{ matrix.goarch }}" = "arm64" ]; then
             export CGO_ENABLED=1
             export CC=aarch64-linux-gnu-gcc
@@ -83,13 +82,17 @@ jobs:
             export PKG_CONFIG_ALLOW_CROSS=1
           fi
 
-          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o "$binary_path" .
-          chmod +x "$binary_path"
+          # Move to daemon folder to build, but output back to absolute build_dir path
+          cd daemon
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o "${build_dir}/${output_name}" .
 
-          mv "$binary_path" "$renamed_path"
+          # Move back to build directory to rename and zip safely
+          cd "$build_dir"
+          chmod +x "$output_name"
+          mv "$output_name" "$renamed_binary"
 
           zip_name="md-daemon-${{ matrix.goos }}-${{ matrix.goarch }}.zip"
-          (cd "$build_dir" && zip "$zip_name" "$renamed_binary")
+          zip "$zip_name" "$renamed_binary"
 
       - name: Upload zipped build
         uses: actions/upload-artifact@v4
@@ -109,18 +112,14 @@ jobs:
       - name: Download all zipped artifacts
         uses: actions/download-artifact@v4
         with:
-          path: builds
+          path: final-builds
           merge-multiple: true
-
-      - name: Install GitHub CLI
-        run: |
-          sudo apt update
-          sudo apt install -y gh
 
       - name: Create or update 'latest' release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Use 'gh' directly (pre-installed on ubuntu-latest)
           if gh release view latest &>/dev/null; then
             echo "Release 'latest' exists. Deleting and recreating..."
             gh release delete latest --yes
@@ -135,5 +134,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Look in the current workspace recursively instead of expecting a 'builds' folder
-          find . -type f -name "*.zip" -exec gh release upload latest {} --clobber \;
+          find final-builds -type f -name "*.zip" -exec gh release upload latest {} --clobber \;
