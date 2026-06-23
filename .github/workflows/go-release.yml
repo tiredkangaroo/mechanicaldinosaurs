@@ -135,4 +135,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          find builds -type f -name "*.zip" -exec gh release upload latest {} --clobber \;
+          # Look in the current workspace recursively instead of expecting a 'builds' folder
+          find . -type f -name "*.zip" -exec gh release upload latest {} --clobber \;
