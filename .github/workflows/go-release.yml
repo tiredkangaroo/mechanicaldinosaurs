@@ -32,6 +32,11 @@ jobs:
         with:
           go-version: "1.24"
 
+      - name: Install libvirt development headers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libvirt-dev
+
       - name: Build and zip for ${{ matrix.goos }}/${{ matrix.goarch }}
         run: |
           mkdir -p builds
