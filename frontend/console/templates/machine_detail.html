@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'root.css' %}" />
+    <style>
+      #back-button {
+        /* top right bottom left */
+        padding: 6px 16px;
+      }
+      #machine-name {
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <button id="back-button" onclick="window.location.href='{% url 'machines' %}'">Back</button>
+    <h1 id="machine-name">{{machine.name}}</h1>
+    {% if machine.info.error %}
+    <div class="error-flash">
+      <h2>an error occurred getting machine info</h2>
+      <p>{{machine.info.error}}</p>
+    </div>
+    {% endif %}
+  </body>
+</html>

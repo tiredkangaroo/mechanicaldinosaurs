@@ -12,3 +12,10 @@ button:hover {
     box-shadow: 4px 8px 8px rgba(0, 0, 0, 0.1);
     transition: box-shadow 0.2s ease-in-out;
 }
+.error-flash {
+    background-color: #ffcfcc;
+    color: #ff0000;
+    padding: 6px 12px;
+    border-radius: 5px;
+    border: 2px solid #ff0000;
+}

@@ -1,5 +1,6 @@
 from django.shortcuts import render, HttpResponse, redirect
 from .models import Machine
+import requests
 
 # Create your views here.
 def index(request):
@@ -21,6 +22,17 @@ def machines(request):
             machine.info = {'error': str(e)}
     return render(request, 'machines.html', {'machines': machines})
 
+def machine_detail(request, machine_name):
+    machine = None
+    try:
+        machine = Machine.objects.get(name=machine_name)
+    except Machine.DoesNotExist:
+        return HttpResponse("Machine not found", status=404)
+    try:
+        machine.info = requests.get(f'http://{machine.hostport}/api/info', headers={'Authorization': f'Bearer {machine.secret_key}'}).json()
+    except Exception as e:
+        machine.info = {'error': str(e)}
+    return render(request, 'machine_detail.html', {'machine': machine})
 
 def machine_delete(request, machine_name):
     try:

@@ -89,16 +89,18 @@
 
     <ul class="machine-list">
       {% for machine in machines %}
-      <li class="machine-list-item">
-        <div><b>{{ machine.name }}</b> ({{ machine.hostport }})</div>
-        <div>
-          <!-- apparently the django way of doing it is this... html forms don't even support DELETE -->
-          <form action="/machine/{{ machine.name }}/delete/" method="post" style="margin: 0">
-            {% csrf_token %}
-            <button type="submit">delete</button>
-          </form>
-        </div>
-      </li>
+      <a href="{% url 'machine_detail' machine.name %}" style="text-decoration: none; color: inherit">
+        <li class="machine-list-item">
+          <div><b>{{ machine.name }}</b> ({{ machine.hostport }})</div>
+          <div>
+            <!-- apparently the django way of doing it is this... html forms don't even support DELETE -->
+            <form action="/machine/{{ machine.name }}/delete/" method="post" style="margin: 0">
+              {% csrf_token %}
+              <button type="submit">delete</button>
+            </form>
+          </div>
+        </li>
+      </a>
       {% endfor %}
     </ul>
 
