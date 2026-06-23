@@ -27,8 +27,8 @@ func main() {
 	registerDockerRoutes(api)
 	registerVMRoutes(api)
 
-	slog.Info("starting server", "port", 6731)
-	if err := e.Start(":6731"); err != nil {
+	slog.Info("starting server", "port", PORT)
+	if err := e.Start(":" + PORT); err != nil {
 		slog.Error("server error", "error", err)
 	}
 }
