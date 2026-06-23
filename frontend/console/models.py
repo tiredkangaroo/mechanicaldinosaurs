@@ -2,7 +2,7 @@ from django.db import models
 
 # Create your models here.
 class Machine(models.Model):
-    name = models.CharField(max_length=64)
+    name = models.CharField(max_length=64, primary_key=True)
     hostport = models.CharField(max_length=512)
     secret_key = models.CharField(max_length=256)
 
