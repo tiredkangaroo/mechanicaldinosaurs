@@ -44,6 +44,7 @@ jobs:
           mkdir -p "$build_dir"
 
           echo "Building for ${{ matrix.goos }}/${{ matrix.goarch }}..."
+          cd daemon
           GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o "$binary_path" .
           chmod +x "$binary_path"
 
