@@ -1,0 +1,14 @@
+html, body {
+    background-color: #fff8e8;
+}
+button {
+    background-color: #f0c040;
+    border: 0px;
+    cursor: pointer;
+    transition: box-shadow 0.2s ease-in-out;
+}
+button:hover {
+    /* this box shadow is going to look so ai 😭 */
+    box-shadow: 4px 8px 8px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.2s ease-in-out;
+}
