@@ -14,15 +14,128 @@
       #machine-name {
         text-align: center;
       }
+      .machine-info {
+        max-width: 600px;
+        margin: 20px auto;
+        padding: 20px;
+      }
+
+      .machine-info h2 {
+        margin-top: 0;
+        padding-bottom: 10px;
+      }
+
+      .info-section {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        width: 50%;
+      }
+      .info-section h2 {
+        margin: 0;
+      }
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 10px;
+        padding: 15px;
+        border-radius: 6px;
+      }
+      .info-list {
+        display: flex;
+        flex-direction: column;
+        padding: 0px 15px 15px 15px;
+        gap: 10px;
+        border-radius: 6px;
+      }
+      .info-list p {
+        margin: 0;
+      }
+
+      .info-grid p {
+        margin: 0;
+        font-size: 0.95rem;
+      }
+
+      .full-width {
+        grid-column: 1 / -1;
+      }
     </style>
   </head>
   <body>
     <button id="back-button" onclick="window.location.href='{% url 'machines' %}'">Back</button>
-    <h1 id="machine-name">{{machine.name}}</h1>
+    <h1 id="machine-name">{{machine.name}} ({{machine.hostport}})</h1>
+
+    {% if machine.vm_status.error %}
+    <div class="error-flash">
+      <h2>an error occurred getting VM status</h2>
+      <p>{{machine.vm_status.error}}</p>
+    </div>
+    {% else %}
+    <p style="text-align: center">vm status: {{machine.vm_status}}</p>
+    {% endif %}
+
+    <!-- adding comment here bc my formatter is stupid -->
+
+    {% if machine.docker_status.error %}
+    <div class="error-flash">
+      <h2>an error occurred getting docker status</h2>
+      <p>{{machine.docker_status.error}}</p>
+    </div>
+    {% else %}
+    <p style="text-align: center">docker status: {{machine.docker_status}}</p>
+    {% endif %}
+
+    <!-- it's still stupid so must do this comment again -->
+
     {% if machine.info.error %}
     <div class="error-flash">
       <h2>an error occurred getting machine info</h2>
       <p>{{machine.info.error}}</p>
+    </div>
+    {% else %}
+    <div class="machine-info">
+      <h2>machine information 🗣️ℹ️️</h2>
+
+      <div style="display: flex; flex-direction: row; padding-left: 10px">
+        <div class="info-section">
+          <h2>cpu</h2>
+          <div class="info-list">
+            <p><b>model:</b> {{machine.info.cpu}}</p>
+            <p><b>cores:</b> {{machine.info.cpu_num}}</p>
+            <p><b>usage:</b> {{machine.info.cpu_usage}}%</p>
+            <p><b>temp:</b> {{machine.info.cpu_temp}}°C</p>
+          </div>
+        </div>
+        <div class="info-section">
+          <h2>system</h2>
+          <div class="info-list">
+            <p><b>os:</b> {{machine.info.os}}</p>
+            <p><b>uptime:</b> {{machine.info.uptime}}</p>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: row; margin-top: 15px; padding-left: 10px">
+        <div class="info-section">
+          <h2>resources</h2>
+          <div class="info-list">
+            <p><b>memory:</b> {{machine.info.memory_used}} / {{machine.info.memory}} ({{machine.info.memory_util}})</p>
+            <p>
+              <b>disk:</b> {{machine.info.storage_used}} / {{machine.info.storage_capacity}}
+              ({{machine.info.storage_util}})
+            </p>
+          </div>
+        </div>
+        {% if machine.info.has_battery %}
+        <div class="info-section">
+          <h2>battery</h2>
+          <div class="info-list">
+            <p><b>model:</b> {{machine.info.battery}}</p>
+          </div>
+        </div>
+        {% endif %}
+      </div>
     </div>
     {% endif %}
   </body>
