@@ -114,7 +114,9 @@ def create_vm(request, machine_name):
         return render(request, 'create_vm.html', {'machine_name': machine_name, 'boot_files': boot_files, 'max_memory_mb': machine.info.get('memory', 0) // 1024 // 1024, 'max_cpus': machine.info.get('cpu_num', 0), 'max_disk_gb': machine.info.get('storage_capacity', 0) // 1024 // 1024 // 1024})
 
 def vm_detail(request, machine_name, vm_name):
-    pass
+    
+    return render(request, 'vm_detail.html', {'machine_name': machine_name, 'vm_name': vm_name})
+
 # util funcs
 
 def format_bytes(bytes):

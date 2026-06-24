@@ -2,7 +2,6 @@ package vms
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -86,7 +85,7 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge, graphicsType 
 	var diskBus string
 	var bootDiskDevice string
 	if runtime.GOARCH == "arm64" {
-		slog.Info("enabling UEFI firmware and GICv3 for arm64 VM")
+		// slog.Info("enabling UEFI firmware and GICv3 for arm64 VM")
 		// for aarch64, we need to specify UEFI firmware
 		firmwareXML = `<loader readonly='yes' type='pflash'>/usr/share/AAVMF/AAVMF_CODE.fd</loader>
   	<nvram template='/usr/share/AAVMF/AAVMF_VARS.fd'>/var/lib/libvirt/qemu/nvram/yogurt_VARS.fd</nvram>`

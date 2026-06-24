@@ -173,7 +173,10 @@
     </div>
     {% else %} {% for item in machine.vms %}
     <div style="text-align: center; margin-top: 10px">
-      <h3>{{ item.config.name }} ({{ item.status}})</h3>
+      <div style="display: flex; flex-direction: row; justify-content: center; align-items: center; gap: 10px">
+        <h3>{{ item.config.name }} ({{ item.status}})</h3>
+        <a href="{% url 'vm_detail' machine_name=machine.name vm_name=item.config.name %}">view</a>
+      </div>
       <div style="display: flex; flex-direction: column; justify-content: center; gap: 7px">
         <div><b>vCPUs:</b> {{ item.config.vcpus }}</div>
         <div><b>memory:</b> {{ item.config.memory_mib }} MiB</div>

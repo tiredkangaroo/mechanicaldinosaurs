@@ -160,12 +160,8 @@ func registerVMRoutes(api *echo.Group) {
 		return nil, nil
 	})
 
-	server.Handle(vmRouter, server.GetVMRequest, func(c echo.Context, req server.VMTargetReq) (*struct{}, error) {
-		_, err := vms.GetVM(req.Name)
-		if err != nil {
-			return nil, err
-		}
-		return nil, nil
+	server.Handle(vmRouter, server.GetVMRequest, func(c echo.Context, req server.VMTargetReq) (server.VM, error) {
+		return vms.GetVM(req.Name)
 	})
 
 	server.Handle(vmRouter, server.StartVMRequest, func(c echo.Context, req server.VMTargetReq) (*struct{}, error) {

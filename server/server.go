@@ -234,7 +234,7 @@ type VMTargetReq struct {
 	Name string `json:"name"`
 }
 
-var GetVMRequest = StaticRequestInfo[VMTargetReq, struct{}]{
+var GetVMRequest = StaticRequestInfo[VMTargetReq, VM]{
 	Method: "POST", // uh we send the name in the body. hmm i wonder if this is stupid. anything but grpc tho right
 	Path:   "/api/vms/get",
 }
