@@ -160,8 +160,13 @@ func registerVMRoutes(api *echo.Group) {
 		return nil, nil
 	})
 
-	server.Handle(vmRouter, server.GetVMRequest, func(c echo.Context, req server.VMTargetReq) (server.VM, error) {
-		return vms.GetVM(req.Name)
+	server.Handle(vmRouter, server.GetVMRequest, func(c echo.Context, req struct{}) (*server.VM, error) {
+		name := c.QueryParam("name")
+		if name == "" {
+			return nil, echo.NewHTTPError(400, "missing query parameter: name")
+		}
+		vm, err := vms.GetVM(name)
+		return &vm, err
 	})
 
 	server.Handle(vmRouter, server.StartVMRequest, func(c echo.Context, req server.VMTargetReq) (*struct{}, error) {
