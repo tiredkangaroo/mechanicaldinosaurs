@@ -38,6 +38,12 @@ func CreateVM(config *server.VMConfig) (int, error) {
 		return 0, fmt.Errorf("create disk: %w", err)
 	}
 
+	if config.GraphicsType == "" {
+		config.GraphicsType = "spice" // default to spice if not specified
+	} else if config.GraphicsType != "spice" && config.GraphicsType != "vnc" {
+		return 0, fmt.Errorf("invalid graphics type: %s (must be 'spice' or 'vnc')", config.GraphicsType)
+	}
+
 	bridge := dv(config.NetworkBridge, "virbr0") // libvirt's default NAT bridge, unused for now
 
 	// connect to libvirt
@@ -48,7 +54,7 @@ func CreateVM(config *server.VMConfig) (int, error) {
 	defer conn.Close()
 
 	// create and define xml
-	xml := buildDomainXML(config, isoPath, diskPath, bridge)
+	xml := buildDomainXML(config, isoPath, diskPath, bridge, config.GraphicsType)
 	domain, err := conn.DomainDefineXML(xml)
 	if err != nil {
 		return 0, fmt.Errorf("define domain: %w", err)
@@ -73,7 +79,7 @@ func CreateVM(config *server.VMConfig) (int, error) {
 }
 
 // note: bridge is unused
-func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string {
+func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge, graphicsType string) string {
 	var firmwareXML string
 	var extraFeatures string
 	var diskDevPrefix string
@@ -162,7 +168,7 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
       <model type='virtio'/>
     </interface>
 
-    <graphics type='spice' autoport='yes'>
+    <graphics type='%s' autoport='yes'>
       <listen type='address' address='0.0.0.0'/>
 	  <image compression='off'/>
     </graphics>
@@ -198,6 +204,7 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge string) string
 		diskDevPrefix,
 		diskBus,
 		filepath.Join(dataDir, "drivers", "virtio-win.iso"),
+		graphicsType,
 	)
 	os.WriteFile(filepath.Join(dataDir, c.Name+".xml"), []byte(x), 0644) // for debugging
 	return x

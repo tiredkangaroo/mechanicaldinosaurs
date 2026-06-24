@@ -52,6 +52,7 @@ type VMConfig struct {
 	BootFile      string `json:"boot_file"`      // $MECHANICAL_DINOSAURS_DATA/boot_files/<boot_file> should exist on the server
 	DiskGiB       uint   `json:"disk_gib"`       // size of the primary qcow2 disk
 	NetworkBridge string `json:"network_bridge"` // e.g. "virbr0" (default NAT bridge)
+	GraphicsType  string `json:"graphics_type"`  // e.g. "spice" or "vnc"
 }
 
 type VM struct {

@@ -46,6 +46,10 @@ def machine_detail(request, machine_name):
             machine.vm_status = "not available ❌"
         else:
             machine.vm_status = "available ✅"
+            try:
+                machine.vms = requests.get(f"http://{machine.hostport}/api/vms/list", headers={'Authorization': f'Bearer {machine.secret_key}'}).json()
+            except Exception as e:
+                machine.vms = {'error': str(e)}
     except Exception as e:
         machine.vm_status = {'error': str(e)}
 
@@ -55,8 +59,13 @@ def machine_detail(request, machine_name):
             machine.docker_status = "not available ❌"
         else:
             machine.docker_status = "available ✅"
+            try:
+                machine.containers = requests.get(f"http://{machine.hostport}/api/containers/list", headers={'Authorization': f'Bearer {machine.secret_key}'}).json()
+            except Exception as e:
+                machine.containers = {'error': str(e)}
     except Exception as e:
         machine.docker_status = {'error': str(e)}
+    
 
     return render(request, 'machine_detail.html', {'machine': machine})
 
@@ -67,6 +76,46 @@ def machine_delete(request, machine_name):
     except Machine.DoesNotExist:
         return HttpResponse("Machine not found", status=404)
     return redirect('machines')
+
+def create_vm(request, machine_name):
+    machine = None
+    try:
+        machine = Machine.objects.get(name=machine_name)
+        machine.info = requests.get(f'http://{machine.hostport}/api/info', headers={'Authorization': f'Bearer {machine.secret_key}'}).json()
+    except Machine.DoesNotExist:
+        return HttpResponse("machine not found", status=404)
+    except Exception as e:
+        return HttpResponse(f"error fetching machine info: {str(e)}", status=500)
+    if request.method == 'POST':
+        name = request.POST.get('vm_name')
+        vcpus = int(request.POST.get('vcpus'))
+        memory_mb = float(request.POST.get('memory_mb'))
+        boot_file = request.POST.get('boot_file')
+        disk_gb = float(request.POST.get('disk_gb'))
+        graphics_type = request.POST.get('graphics_type')
+
+        try:
+            resp = requests.post(f"http://{machine.hostport}/api/vms/create", headers={'Authorization': f'Bearer {machine.secret_key}'}, json={
+                'name': name,
+                'vcpus': vcpus,
+                'memory_mib': round(memory_mb * 0.9536743),  # convert to MiB
+                'boot_file': boot_file,
+                'disk_gib': round(disk_gb * 0.9313226), # convert to GiB
+                'graphics_type': graphics_type
+            })
+            if resp.status_code == 200:
+                return redirect('vm_detail', machine_name=machine_name, vm_name=name)
+            else:
+                return HttpResponse(f"Failed to create VM: {resp.text}", status=resp.status_code)
+        except Machine.DoesNotExist:
+            return HttpResponse("Machine not found", status=404)
+    else:
+        boot_files = requests.get(f"http://{machine.hostport}/api/vms/boot-files", headers={'Authorization': f'Bearer {machine.secret_key}'}).json()
+        return render(request, 'create_vm.html', {'machine_name': machine_name, 'boot_files': boot_files, 'max_memory_mb': machine.info.get('memory', 0) // 1024 // 1024, 'max_cpus': machine.info.get('cpu_num', 0), 'max_disk_gb': machine.info.get('storage_capacity', 0) // 1024 // 1024 // 1024})
+
+def vm_detail(request, machine_name, vm_name):
+    pass
+# util funcs
 
 def format_bytes(bytes):
     if bytes == 0:

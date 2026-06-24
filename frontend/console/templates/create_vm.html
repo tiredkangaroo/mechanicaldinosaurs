@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'root.css' %}" />
+    <title>create a VM on {{ machine_name }}</title>
+  </head>
+  <body>
+    <h1 style="text-align: center">create a VM on {{ machine_name }}</h1>
+    <form
+      method="POST"
+      action="{% url 'create_vm' machine_name %}"
+      style="display: flex; flex-direction: column; align-items: center; gap: 16px; margin-top: 40px"
+    >
+      {% csrf_token %}
+      <div><label for="vm_name">VM Name:</label> <input type="text" id="vm_name" name="vm_name" required /></div>
+      <div style="display: flex; flex-direction: row; align-items: center; gap: 8px">
+        <label for="vm_image">Boot Image:</label>
+        <select id="vm_image" name="boot_file" required>
+          {% for image in boot_files %}
+          <option value="{{ image }}">{{ image }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display: flex; flex-direction: row; align-items: center; gap: 8px">
+        <label for="vm_cpus">vCPUs:</label>
+        <p id="cpu_value" style="margin: 0">1</p>
+        <input
+          type="range"
+          id="vm_cpus"
+          name="vcpus"
+          min="1"
+          max="{{ max_cpus }}"
+          step="1"
+          value="1"
+          required
+          oninput="document.getElementById('cpu_value').textContent = this.value"
+        />
+      </div>
+      <div style="display: flex; flex-direction: row; align-items: center; gap: 8px">
+        <label for="vm_memory">Memory:</label>
+        <p id="memory_value" style="margin: 0">1024 MB</p>
+        <input
+          type="range"
+          id="vm_memory"
+          name="memory_mb"
+          min="128"
+          max="{{ max_memory_mb }}"
+          step="128"
+          value="1024"
+          required
+          oninput="document.getElementById('memory_value').textContent = this.value + ' MB'"
+        />
+      </div>
+    <div style="display: flex; flex-direction: row; align-items: center; gap: 8px">
+        <label for="vm_disk">Disk Size:</label>
+        <p id="disk_value" style="margin: 0">10 GB</p>
+        <input
+          type="range"
+          id="vm_disk"
+          name="disk_gb"
+          min="1"
+          max="{{ max_disk_gb }}"
+          step="1"
+          value="10"
+          required
+          oninput="document.getElementById('disk_value').textContent = this.value + ' GB'"
+        />
+      </div>
+      <div style="display: flex; flex-direction: row; align-items: center; gap: 8px">
+        <label for="vm_graphics">Graphics Type:</label>
+        <select id="vm_graphics" name="graphics_type" required>
+          <option value="vnc">vnc</option>
+          <option value="spice">spice</option>
+        </select>
+      </div>
+      <div><button type="submit" style="padding: 8px 15px">Create VM</button></div>
+
+    </div>
+    </form>
+  </body>
+</html>

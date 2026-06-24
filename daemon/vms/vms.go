@@ -179,11 +179,19 @@ func GetConfigFromXML(xmlDesc string) (server.VMConfig, error) {
 	if bootISO.Source.File == "" || primaryDisk.Source.File == "" {
 		return server.VMConfig{}, fmt.Errorf("unexpected domain XML: missing boot ISO or primary disk")
 	}
+	var graphicsType string
+	for _, g := range d.Devices.Graphics {
+		if g.Type == "vnc" || g.Type == "spice" {
+			graphicsType = g.Type
+			break
+		}
+	}
 	return server.VMConfig{
-		Name:      d.Name,
-		VCPUs:     uint(d.VCPU.Value),
-		MemoryMiB: memoryMiB,
-		BootFile:  filepath.Base(bootISO.Source.File),
+		Name:         d.Name,
+		VCPUs:        uint(d.VCPU.Value),
+		MemoryMiB:    memoryMiB,
+		BootFile:     filepath.Base(bootISO.Source.File),
+		GraphicsType: graphicsType,
 	}, nil
 }
 
