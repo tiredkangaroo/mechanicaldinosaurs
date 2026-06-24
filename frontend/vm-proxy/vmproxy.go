@@ -112,7 +112,7 @@ func handleConnection(clientConn net.Conn) {
 		}
 	}()
 
-	log.Printf("forwarding connection from %s to %s (created at %s)", clientAddr, vmName, createdAt)
+	log.Printf("forwarding connection from %s to %s (created at %s, session id: %s)", clientAddr, vmName, createdAt, sessionID)
 
 	daemonConn, err := net.DialTimeout("tcp", hostport, 5*time.Second)
 	if err != nil {

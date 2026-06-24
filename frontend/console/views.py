@@ -217,7 +217,7 @@ def vm_connect(request, machine_name, vm_name):
     try:
         unclaimedSessions = VMSession.objects.filter(claimed=False)
         if unclaimedSessions.exists():
-            return redirect(reverse('vm_detail', kwargs={'machine_name': machine_name, 'vm_name': vm_name}) + f"?error=there are unclaimed sessions, please disconnect them first.")
+            return redirect(reverse('vm_detail', kwargs={'machine_name': machine_name, 'vm_name': vm_name}) + f"?error=there is an unclaimed session for VM {unclaimedSessions.first().vm_name} on machine {unclaimedSessions.first().machine.name}. Please claim or disconnect it first.")
     except Exception as e:
         return HttpResponse(f"error checking unclaimed sessions: {str(e)}", status=503)
 
