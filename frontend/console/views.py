@@ -11,7 +11,27 @@ vm_proxy_disconnect_secret = "08ba70bc9cb9a486ed0cdc7798e9fb571f75f9e6888d40f07f
 
 # Create your views here.
 def index(request):
-    return render(request, 'index.html')
+    machines = Machine.objects.all()
+    vms = []
+    containers = []
+    for machine in machines:
+            try:
+                machine.vms = requests.get(f"http://{machine.hostport}/api/vms/list", headers={'Authorization': f'Bearer {machine.secret_key}'}).json()
+                if not getattr(machine.vms, 'error', None): # not err is present
+                    for vm in machine.vms:
+                        vm['machine'] = machine
+                        vms.append(vm)
+            except Exception as e:
+                print(f"error fetching vms for machine {machine.name}: {str(e)}")
+            try:
+                machine.containers = requests.get(f"http://{machine.hostport}/api/containers/list", headers={'Authorization': f'Bearer {machine.secret_key}'}).json()
+                if not getattr(machine.containers, 'error', None):
+                    for container in machine.containers:
+                        container['machine'] = machine
+                        containers.append(container)
+            except Exception as e:
+                print(f"error fetching containers for machine {machine.name}: {str(e)}")
+    return render(request, 'index.html', {'machines': machines, 'vms': vms, 'containers': containers})
 
 
 def machines(request):
@@ -22,13 +42,8 @@ def machines(request):
 
         machine = Machine(name=name, hostport=hostport, secret_key=secret_key)
         machine.save()
-    machines = Machine.objects.all()
-    for machine in machines:
-        try:
-            machine.info = requests.get(f'http://{machine.hostport}/api/info', headers={'Authorization': f'Bearer {machine.secret_key}'}).json()
-        except Exception as e:
-            machine.info = {'error': str(e)}
-    return render(request, 'machines.html', {'machines': machines})
+        return redirect('machine_detail', machine_name=name)
+    return redirect('index')
 
 def machine_detail(request, machine_name):
     machine = None
@@ -83,7 +98,7 @@ def machine_delete(request, machine_name):
         machine.delete()
     except Machine.DoesNotExist:
         return HttpResponse("Machine not found", status=404)
-    return redirect('machines')
+    return redirect('index')
 
 def create_vm(request, machine_name):
     machine = None

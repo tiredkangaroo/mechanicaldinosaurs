@@ -3,11 +3,162 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Your Machines</title>
     {% load static %}
     <link rel="stylesheet" href="{% static 'root.css' %}" />
-    <title>mechanical dinosaurs</title>
+    <style>
+      .machines, .vms, .containers {
+        background-color: #f7e9c1;
+        padding: 20px;
+      }
+      .machines-title {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+      }
+      #add-machine-button {
+        font-size: 150%;
+        padding-left: 0.6rem;
+        padding-right: 0.6rem;
+      }
+      #add-machine-dialog {
+        width: 45%;
+        text-align: right;
+        padding-bottom: 2rem;
+      }
+      #add-machine-dialog-close {
+        padding-left: 0.7rem;
+        padding-right: 0.7rem;
+        padding-top: 0.4rem;
+        padding-bottom: 0.4rem;
+      }
+      #add-machine-dialog-content {
+        display: flex;
+        flex-direction: column;
+        text-align: center;
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+      .add-machine-form {
+        margin-top: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .add-machine-form > input {
+        padding: 8px;
+        font-size: 16px;
+      }
+      .add-machine-form > button {
+        padding: 10px;
+        font-size: 16px;
+        cursor: pointer;
+      }
+      .machine-list, .vm-list, .container-list {
+        list-style-type: none;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .machine-list-item, .vm-list-item, .container-list-item {
+        background-color: #f0f0f0;
+        padding: 10px;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+      }
+    </style>
   </head>
   <body>
-    hello mr. mechanical dinosaur
+    <h1 style="text-align: center">mechanical dinosaurs 🦕</h1>
+
+    <dialog popover id="add-machine-dialog">
+      <button id="add-machine-dialog-close" popovertarget="add-machine-dialog" popovertargetaction="close">X</button>
+      <div id="add-machine-dialog-content">
+        <h1>add a machine</h1>
+        <form method="post" action="{% url 'machines' %}" class="add-machine-form">
+          {% csrf_token %}
+          <input type="text" name="name" placeholder="machine name" required />
+          <input type="text" name="hostport" placeholder="hostport" required />
+          <input type="password" name="secret_key" placeholder="secret key" required />
+          <button type="submit">add da machine</button>
+        </form>
+      </div>
+    </dialog>
+
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <div class="machines">
+        <div class="machines-title">
+          <h1>your machines ⚙️</h1>
+          <button id="add-machine-button" popovertarget="add-machine-dialog">+</button>
+        </div>
+        
+        <ul class="machine-list">
+          {% for machine in machines %}
+          <a href="{% url 'machine_detail' machine.name %}" style="text-decoration: none; color: inherit">
+            <li class="machine-list-item">
+              <div><b>{{ machine.name }}</b> ({{ machine.hostport }})</div>
+              <div>
+                <!-- apparently the django way of doing it is this... html forms don't even support DELETE -->
+                <form action="/machine/{{ machine.name }}/delete/" method="post" style="margin: 0">
+                  {% csrf_token %}
+                  <button type="submit">delete</button>
+                </form>
+              </div>
+            </li>
+          </a>
+          {% empty %}
+          <p style="margin: 0">No machines found.</p>
+          {% endfor %}
+        </ul>
+      </div>
+      
+      <div class="vms">
+        <h1>your vms</h1>
+        <ul class="vm-list">
+          {% for vm in vms %}
+          <a href="{% url 'vm_detail' vm.machine.name vm.config.name %}" style="text-decoration: none; color: inherit">
+            <li class="vm-list-item">
+                <div><b>{{ vm.config.name }}</b> on {{ vm.machine.name }}</div>                
+                <div style="display: flex; justify-content: center; align-items: center; gap: 6px;">
+                  <div class="status-indicator status-{{ vm.status }}"></div>
+                  {{ vm.status }}
+                </div>
+            </li>
+          </a>
+          {% empty %}
+          <p style="margin: 0">No VMs found.</p>
+          {% endfor %}
+        </div>
+
+      <div class="containers">
+        <h1>your containers 🐳</h1>
+        <ul class="container-list">
+          {% for container in containers %}
+          <li class="container-list-item">
+            <div><b>{{ container.Container.Name|slice:"1:" }}</b> on {{ container.machine.name }} (image: {{ container.Container.Config.Image }}) </div>
+            <div style="display: flex; justify-content: center; align-items: center; gap: 6px;">
+              <div class="status-indicator status-{{ container.Container.State.Status }}"></div>
+              {{ container.Container.State.Status }}
+            </div>
+          </li>
+          {% empty %}
+          <p style="margin: 0">No containers found.</p>
+          {% endfor %}
+        </ul>
+      </div>
+      </div>
+    <script>
+      function toggleAddMachineDialog() {
+        const dialog = document.getElementById("add-machine-dialog");
+        if (dialog.hasAttribute("hidden")) {
+          dialog.removeAttribute("hidden");
+        } else {
+          dialog.setAttribute("hidden", "");
+        }
+      }
+    </script>
   </body>
 </html>

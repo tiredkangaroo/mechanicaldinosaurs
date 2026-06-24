@@ -7,17 +7,6 @@
     {% load static %}
     <link rel="stylesheet" href="{% static 'root.css' %}" />
     <style>
-      .status-indicator {
-        display: inline-block;
-        width: 0.8rem;
-        height: 0.8rem;
-      }
-      .status-running {
-        background-color: green;
-      }
-      .status-stopped {
-        background-color: red;
-      }
       #vm-actions {
         display: flex;
         flex-direction: row;
@@ -32,12 +21,7 @@
     </style>
   </head>
   <body>
-    <button
-      onclick="window.location.href='{% url 'machine_detail' machine.name %}'"
-      style="padding: 0.3rem 1rem; margin-bottom: 1rem"
-    >
-      back to viewing {{ machine.name }}
-    </button>
+    <button onclick="history.back()" style="padding: 0.3rem 1rem; margin-bottom: 1rem">back</button>
     <h1 style="text-align: center; font-weight: normal"><b>{{ vm.config.name }}</b> on <b>{{ machine.name }}</b></h1>
     <div style="display: flex; justify-content: center; align-items: center; gap: 9px">
       <div class="status-indicator status-{{ vm.status }}"></div>
@@ -80,10 +64,12 @@
     {% endif %}
     <div style="display: flex; align-items: center; gap: 9px; margin: 0">
       <h2>remote sessions</h2>
+      {% if vm.status == 'running' %}
       <form method="post" action="{% url 'vm_connect' machine.name vm.config.name %}">
         {% csrf_token %}
         <button type="submit">new session</button>
       </form>
+      {% endif %}
     </div>
     {% if sessions %}
     <ul style="margin: 0">

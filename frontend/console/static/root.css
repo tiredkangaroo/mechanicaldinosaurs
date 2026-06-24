@@ -20,3 +20,16 @@ button:hover {
     border-radius: 5px;
     border: 2px solid #ff0000;
 }
+.status-indicator {
+    display: inline-block;
+    width: 0.8rem;
+    height: 0.8rem;
+}
+
+.status-running {
+    background-color: green;
+}
+
+.status-stopped {
+    background-color: red;
+}
