@@ -207,4 +207,17 @@ func registerVMRoutes(api *echo.Group) {
 		}
 		return nil, nil
 	})
+
+	vmRouter.GET("/api/vms/:name/proxy", func(c echo.Context) error {
+		name := c.Param("name")
+		if name == "" {
+			return echo.NewHTTPError(400, "missing path parameter: name")
+		}
+		conn, _, err := c.Response().Hijack()
+		if err != nil {
+			return echo.NewHTTPError(500, "failed to hijack connection")
+		}
+		defer conn.Close()
+		return vms.ProxyVM(name, conn)
+	})
 }

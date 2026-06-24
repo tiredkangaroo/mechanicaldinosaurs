@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
+	"io"
 	"log/slog"
+	"net"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -204,6 +206,7 @@ func dv(a, b string) string {
 	return b
 }
 
+// this works for spice as well
 func vncPortFromXML(xmlDesc string) (int, error) {
 	var d struct {
 		Devices struct {
@@ -222,4 +225,46 @@ func vncPortFromXML(xmlDesc string) (int, error) {
 		}
 	}
 	return 0, fmt.Errorf("no vnc graphics found")
+}
+
+// proxy vm, blocks until conn is closed
+func ProxyVM(name string, conn io.ReadWriteCloser) error {
+	// get the port from domain
+	connLibvirt, err := libvirt.NewConnect("qemu:///system")
+	if err != nil {
+		return fmt.Errorf("connect to hypervisor: %w", err)
+	}
+	defer connLibvirt.Close()
+
+	domain, err := connLibvirt.LookupDomainByName(name)
+	if err != nil {
+		return fmt.Errorf("lookup domain: %w", err)
+	}
+
+	xmlDesc, err := domain.GetXMLDesc(0)
+	if err != nil {
+		return fmt.Errorf("get domain XML description: %w", err)
+	}
+
+	port, err := vncPortFromXML(xmlDesc)
+	if err != nil {
+		return fmt.Errorf("get VNC port from XML: %w", err)
+	}
+
+	// connect to the server
+	connVNC, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", port))
+	if err != nil {
+		return fmt.Errorf("connect to VNC server: %w", err)
+	}
+	defer connVNC.Close()
+
+	// proxy the connection
+	go func() {
+		defer conn.Close()
+		defer connVNC.Close()
+		io.Copy(conn, connVNC)
+	}()
+	io.Copy(connVNC, conn)
+
+	return nil
 }

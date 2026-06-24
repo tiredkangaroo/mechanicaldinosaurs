@@ -168,7 +168,7 @@ func buildDomainXML(c *server.VMConfig, isoPath, diskPath, bridge, graphicsType 
     </interface>
 
     <graphics type='%s' autoport='yes'>
-      <listen type='address' address='0.0.0.0'/>
+      <listen type='address' address='127.0.0.1'/>
 	  <image compression='off'/>
     </graphics>
 	<sound model='ich9'/>
