@@ -177,14 +177,18 @@ func registerVMRoutes(api *echo.Group) {
 	})
 
 	server.Handle(vmRouter, server.StopVMRequest, func(c echo.Context, req server.VMTargetReq) (*struct{}, error) {
-		if err := vms.StopVM(req.Name, true); err != nil {
+		forcefulStr := c.QueryParam("force")
+		forceful := forcefulStr == "true"
+		if err := vms.StopVM(req.Name, !forceful); err != nil {
 			return nil, err
 		}
 		return nil, nil
 	})
 
 	server.Handle(vmRouter, server.RestartVMRequest, func(c echo.Context, req server.VMTargetReq) (*struct{}, error) {
-		if err := vms.RestartVM(req.Name, true); err != nil {
+		forcefulStr := c.QueryParam("force")
+		forceful := forcefulStr == "true"
+		if err := vms.RestartVM(req.Name, !forceful); err != nil {
 			return nil, err
 		}
 		return nil, nil

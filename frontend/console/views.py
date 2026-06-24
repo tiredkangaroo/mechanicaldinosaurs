@@ -150,7 +150,8 @@ def vm_stop(request, machine_name, vm_name):
         return HttpResponse("machine not found", status=404)
     
     try:
-        resp = requests.post(f"http://{machine.hostport}/api/vms/stop", headers={'Authorization': f'Bearer {machine.secret_key}'}, json={'name': vm_name})
+        force = request.POST.get('force')
+        resp = requests.post(f"http://{machine.hostport}/api/vms/stop?force={force}", headers={'Authorization': f'Bearer {machine.secret_key}'}, json={'name': vm_name})
         if resp.status_code == 200:
             return redirect('vm_detail', machine_name=machine_name, vm_name=vm_name)
         else:
@@ -166,7 +167,8 @@ def vm_restart(request, machine_name, vm_name):
         return HttpResponse("machine not found", status=404)
     
     try:
-        resp = requests.post(f"http://{machine.hostport}/api/vms/restart", headers={'Authorization': f'Bearer {machine.secret_key}'}, json={'name': vm_name})
+        force = request.POST.get('force')
+        resp = requests.post(f"http://{machine.hostport}/api/vms/restart?force={force}", headers={'Authorization': f'Bearer {machine.secret_key}'}, json={'name': vm_name})
         if resp.status_code == 200:
             return redirect('vm_detail', machine_name=machine_name, vm_name=vm_name)
         else:

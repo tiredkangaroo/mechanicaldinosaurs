@@ -2,6 +2,7 @@ package vms
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -9,6 +10,7 @@ import (
 )
 
 func StartVM(name string) error {
+	slog.Info("starting vm", "name", name)
 	domain, conn, err := getDomain(name)
 	if err != nil {
 		return err
@@ -26,8 +28,10 @@ func StopVM(name string, graceful bool) error {
 	defer conn.Close()
 
 	if graceful {
+		slog.Info("shutting down vm gracefully", "name", name)
 		return domain.Shutdown() // sends ACPI signal; guest OS shuts down cleanly
 	}
+	slog.Info("shutting down vm forcefully", "name", name)
 	return domain.Destroy() // hard power-off
 }
 
@@ -39,8 +43,10 @@ func RestartVM(name string, graceful bool) error {
 	defer conn.Close()
 
 	if graceful {
+		slog.Info("rebooting vm gracefully", "name", name)
 		return domain.Reboot(libvirt.DOMAIN_REBOOT_DEFAULT)
 	}
+	slog.Info("rebooting vm forcefully", "name", name)
 	if err := domain.Destroy(); err != nil {
 		return err
 	}
@@ -78,6 +84,7 @@ func DeleteVM(name string) error {
 	}
 	defer conn.Close()
 
+	slog.Info("deleting vm", "name", name)
 	_ = domain.Destroy() // best-effort stop; ignore error if already off
 	diskPath := filepath.Join(dataDir, "disks", name+".qcow2")
 	if err := domain.UndefineFlags(libvirt.DOMAIN_UNDEFINE_NVRAM); err != nil {
