@@ -114,8 +114,81 @@ def create_vm(request, machine_name):
         return render(request, 'create_vm.html', {'machine_name': machine_name, 'boot_files': boot_files, 'max_memory_mb': machine.info.get('memory', 0) // 1024 // 1024, 'max_cpus': machine.info.get('cpu_num', 0), 'max_disk_gb': machine.info.get('storage_capacity', 0) // 1024 // 1024 // 1024})
 
 def vm_detail(request, machine_name, vm_name):
+    machine = None
+    try:
+        machine = Machine.objects.get(name=machine_name)
+    except Machine.DoesNotExist:
+        return HttpResponse("machine not found", status=404)
     
-    return render(request, 'vm_detail.html', {'machine_name': machine_name, 'vm_name': vm_name})
+    try:
+        vm = requests.get(f"http://{machine.hostport}/api/vms/get?name={vm_name}", headers={'Authorization': f'Bearer {machine.secret_key}'}).json()
+    except Exception as e:
+        return HttpResponse(f"error fetching VM details: {str(e)}", status=503)
+    return render(request, 'vm_detail.html', {'machine': machine, 'vm': vm})
+
+def vm_start(request, machine_name, vm_name):
+    machine = None
+    try:
+        machine = Machine.objects.get(name=machine_name)
+    except Machine.DoesNotExist:
+        return HttpResponse("machine not found", status=404)
+    
+    try:
+        resp = requests.post(f"http://{machine.hostport}/api/vms/start", headers={'Authorization': f'Bearer {machine.secret_key}'}, json={'name': vm_name})
+        if resp.status_code == 200:
+            return redirect('vm_detail', machine_name=machine_name, vm_name=vm_name)
+        else:
+            return HttpResponse(f"Failed to start VM: {resp.text}", status=resp.status_code)
+    except Exception as e:
+        return HttpResponse(f"error starting VM: {str(e)}", status=503)
+
+def vm_stop(request, machine_name, vm_name):
+    machine = None
+    try:
+        machine = Machine.objects.get(name=machine_name)
+    except Machine.DoesNotExist:
+        return HttpResponse("machine not found", status=404)
+    
+    try:
+        resp = requests.post(f"http://{machine.hostport}/api/vms/stop", headers={'Authorization': f'Bearer {machine.secret_key}'}, json={'name': vm_name})
+        if resp.status_code == 200:
+            return redirect('vm_detail', machine_name=machine_name, vm_name=vm_name)
+        else:
+            return HttpResponse(f"Failed to stop VM: {resp.text}", status=resp.status_code)
+    except Exception as e:
+        return HttpResponse(f"error stopping VM: {str(e)}", status=503)
+
+def vm_restart(request, machine_name, vm_name):
+    machine = None
+    try:
+        machine = Machine.objects.get(name=machine_name)
+    except Machine.DoesNotExist:
+        return HttpResponse("machine not found", status=404)
+    
+    try:
+        resp = requests.post(f"http://{machine.hostport}/api/vms/restart", headers={'Authorization': f'Bearer {machine.secret_key}'}, json={'name': vm_name})
+        if resp.status_code == 200:
+            return redirect('vm_detail', machine_name=machine_name, vm_name=vm_name)
+        else:
+            return HttpResponse(f"Failed to restart VM: {resp.text}", status=resp.status_code)
+    except Exception as e:
+        return HttpResponse(f"error restarting VM: {str(e)}", status=503)
+
+def vm_delete(request, machine_name, vm_name):
+    machine = None
+    try:
+        machine = Machine.objects.get(name=machine_name)
+    except Machine.DoesNotExist:
+        return HttpResponse("machine not found", status=404)
+    
+    try:
+        resp = requests.post(f"http://{machine.hostport}/api/vms/delete", headers={'Authorization': f'Bearer {machine.secret_key}'}, json={'name': vm_name})
+        if resp.status_code == 200:
+            return redirect('machine_detail', machine_name=machine_name)
+        else:
+            return HttpResponse(f"Failed to delete VM: {resp.text}", status=resp.status_code)
+    except Exception as e:
+        return HttpResponse(f"error deleting VM: {str(e)}", status=503)
 
 # util funcs
 

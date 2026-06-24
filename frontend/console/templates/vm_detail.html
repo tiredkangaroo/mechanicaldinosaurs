@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VM {{ vm.config.name }} on {{ machine.name }}</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'root.css' %}" />
+    <style>
+      .status-indicator {
+        display: inline-block;
+        width: 0.8rem;
+        height: 0.8rem;
+      }
+      .status-running {
+        background-color: green;
+      }
+      #vm-actions {
+        display: flex;
+        flex-direction: row;
+        gap: 12px;
+        justify-content: center;
+        align-items: center;
+        margin-top: 1rem;
+      }
+      #vm-actions button {
+        padding: 0.45rem 1.2rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 style="text-align: center; font-weight: normal"><b>{{ vm.config.name }}</b> on <b>{{ machine.name }}</b></h1>
+    <div style="display: flex; justify-content: center; align-items: center; gap: 9px">
+      <div class="status-indicator status-{{ vm.status }}"></div>
+      {{ vm.status }}
+    </div>
+    <div id="vm-actions">
+      {% if vm.status == 'running' %}
+      <form method="post" action="{% url 'vm_stop' machine.name vm.config.name %}">
+        {% csrf_token %}
+        <button type="submit">stop</button>
+      </form>
+      <form method="post" action="{% url 'vm_restart' machine.name vm.config.name %}">
+        {% csrf_token %}
+        <button type="submit">restart</button>
+      </form>
+      {% else %}
+      <form method="post" action="{% url 'vm_start' machine.name vm.config.name %}">
+        {% csrf_token %}
+        <button type="submit">start</button>
+      </form>
+      {% endif %}
+      <form method="post" action="{% url 'vm_delete' machine.name vm.config.name %}">
+        {% csrf_token %}
+        <button type="submit" style="background-color: red; color: white">delete</button>
+      </form>
+    </div>
+  </body>
+</html>
