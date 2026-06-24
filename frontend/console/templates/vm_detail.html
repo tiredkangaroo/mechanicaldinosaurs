@@ -32,6 +32,12 @@
     </style>
   </head>
   <body>
+    <button
+      onclick="window.location.href='{% url 'machine_detail' machine.name %}'"
+      style="padding: 0.3rem 1rem; margin-bottom: 1rem"
+    >
+      back to viewing {{ machine.name }}
+    </button>
     <h1 style="text-align: center; font-weight: normal"><b>{{ vm.config.name }}</b> on <b>{{ machine.name }}</b></h1>
     <div style="display: flex; justify-content: center; align-items: center; gap: 9px">
       <div class="status-indicator status-{{ vm.status }}"></div>

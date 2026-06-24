@@ -6,6 +6,7 @@ button {
     border: 0px;
     cursor: pointer;
     transition: box-shadow 0.2s ease-in-out;
+    border-radius: 4px;
 }
 button:hover {
     /* this box shadow is going to look so ai 😭 */
