@@ -82,12 +82,15 @@ type Devices struct {
 }
 
 type Disk struct {
-	Type     string     `xml:"type,attr"`
-	Device   string     `xml:"device,attr"`
-	Driver   DiskDriver `xml:"driver"`
-	Source   DiskSource `xml:"source"`
-	Target   DiskTarget `xml:"target"`
-	ReadOnly *struct{}  `xml:"readonly"`
+	Type   string     `xml:"type,attr"`
+	Device string     `xml:"device,attr"`
+	Driver DiskDriver `xml:"driver"`
+	Source DiskSource `xml:"source"`
+	Target DiskTarget `xml:"target"`
+	Boot   struct {
+		Order int `xml:"order,attr"`
+	} `xml:"boot"`
+	ReadOnly *struct{} `xml:"readonly"`
 }
 
 type DiskDriver struct {

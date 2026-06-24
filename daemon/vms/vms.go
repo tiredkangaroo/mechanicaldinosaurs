@@ -172,7 +172,7 @@ func GetConfigFromXML(xmlDesc string) (server.VMConfig, error) {
 	var bootISO Disk
 	var primaryDisk Disk
 	for _, disk := range d.Devices.Disks {
-		if disk.Type == "file" && disk.Driver.Type == "raw" && (disk.Device == "cdrom" || disk.Device == "disk") {
+		if disk.Type == "file" && disk.Driver.Type == "raw" && disk.Boot.Order == 2 {
 			bootISO = disk
 		} else if disk.Type == "file" && disk.Driver.Type == "qcow2" {
 			primaryDisk = disk
