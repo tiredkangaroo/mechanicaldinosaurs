@@ -4,7 +4,15 @@ import requests, math
 
 # Create your views here.
 def index(request):
-    return render(request, 'index.html')
+    vm_name = getattr(request, 'vm_name', None)
+    machine_name = getattr(request, 'machine_name', None)
+    if not vm_name or not machine_name:
+        return render(request, 'index.html')
+    # else:
+    #     machine = Machine.objects.get(name=machine_name)
+    #     try:
+    #         f"http://{machine.hostport}/api/vms/{vm_name}/proxy"
+
 
 def machines(request):
     if request.method == 'POST':
