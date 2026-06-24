@@ -66,5 +66,39 @@
         <button type="submit" style="background-color: red; color: white">delete</button>
       </form>
     </div>
+    {% if error %}
+    <div class="error-flash" style="margin-top: 12px; margin-bottom: 3px">
+      {{ error }}
+      <button onclick="window.location.href='{% url 'vm_detail' machine.name vm.config.name %}'">dismiss</button>
+    </div>
+    {% endif %}
+    <div style="display: flex; align-items: center; gap: 9px; margin: 0">
+      <h2>remote sessions</h2>
+      <form method="post" action="{% url 'vm_connect' machine.name vm.config.name %}">
+        {% csrf_token %}
+        <button type="submit">new session</button>
+      </form>
+    </div>
+    {% if sessions %}
+    <ul style="margin: 0">
+      {% for session in sessions %}
+      <li style="margin: 0">
+        session {{ session.session_id }}{% if session.claimed %} (claimed by {{ session.claimed_by }}){% else %}
+        (unclaimed){% endif %}
+        <form
+          method="post"
+          action="{% url 'vm_disconnect' machine.name vm.config.name session.session_id %}"
+          style="display: inline"
+        >
+          {% csrf_token %}
+          <input type="hidden" name="session_uuid" value="{{ session.session_id }}" />
+          <button type="submit">{% if session.claimed %}disconnect{% else %}delete{% endif %}</button>
+        </form>
+        {% endfor %}
+      </li>
+    </ul>
+    {% else %}
+    <p style="margin: 0">No active sessions for {{ vm.config.name }}.</p>
+    {% endif %}
   </body>
 </html>

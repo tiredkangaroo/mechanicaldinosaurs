@@ -1,17 +1,12 @@
-from django.shortcuts import render, HttpResponse, redirect
-from .models import Machine
-import requests, math
+from django.shortcuts import render, HttpResponse, redirect, reverse
+from .models import Machine, VMSession
+import requests, math, uuid
+
+# note: secure this whole thing with auth
 
 # Create your views here.
 def index(request):
-    vm_name = getattr(request, 'vm_name', None)
-    machine_name = getattr(request, 'machine_name', None)
-    if not vm_name or not machine_name:
-        return render(request, 'index.html')
-    # else:
-    #     machine = Machine.objects.get(name=machine_name)
-    #     try:
-    #         f"http://{machine.hostport}/api/vms/{vm_name}/proxy"
+    return render(request, 'index.html')
 
 
 def machines(request):
@@ -132,7 +127,14 @@ def vm_detail(request, machine_name, vm_name):
         vm = requests.get(f"http://{machine.hostport}/api/vms/get?name={vm_name}", headers={'Authorization': f'Bearer {machine.secret_key}'}).json()
     except Exception as e:
         return HttpResponse(f"error fetching VM details: {str(e)}", status=503)
-    return render(request, 'vm_detail.html', {'machine': machine, 'vm': vm})
+    
+    sessions = None
+    try:
+        sessions = VMSession.objects.filter(vm_name=vm_name, machine=machine)
+    except Exception as e:
+        return HttpResponse(f"error fetching sessions: {str(e)}", status=503)
+
+    return render(request, 'vm_detail.html', {'machine': machine, 'vm': vm, 'sessions': sessions, 'error': request.GET.get('error', '')})
 
 def vm_start(request, machine_name, vm_name):
     machine = None
@@ -199,6 +201,38 @@ def vm_delete(request, machine_name, vm_name):
             return HttpResponse(f"Failed to delete VM: {resp.text}", status=resp.status_code)
     except Exception as e:
         return HttpResponse(f"error deleting VM: {str(e)}", status=503)
+
+def vm_connect(request, machine_name, vm_name):
+    machine = None
+    try:
+        machine = Machine.objects.get(name=machine_name)
+    except Machine.DoesNotExist:
+        return HttpResponse("machine not found", status=404)
+    
+    try:
+        unclaimedSessions = VMSession.objects.filter(claimed=False)
+        if unclaimedSessions.exists():
+            return redirect(reverse('vm_detail', kwargs={'machine_name': machine_name, 'vm_name': vm_name}) + f"?error=there are unclaimed sessions, please disconnect them first.")
+    except Exception as e:
+        return HttpResponse(f"error checking unclaimed sessions: {str(e)}", status=503)
+
+    sessionUUID = str(uuid.uuid4())
+    session = None
+    try:
+        VMSession(vm_name=vm_name, machine=machine, session_id=sessionUUID).save()
+    except Exception as e:
+        return HttpResponse(f"error creating session: {str(e)}", status=503)
+    
+    return redirect('vm_detail', machine_name=machine_name, vm_name=vm_name)
+
+def vm_disconnect(request, machine_name, vm_name, session_id):
+    try:
+        session = VMSession.objects.get(session_id=session_id)
+        # NOTE: if session is claimed, it should send a note to vm-proxy to terminate the connection
+        session.delete()
+    except VMSession.DoesNotExist:
+        return HttpResponse("session not found", status=404)
+    return redirect('vm_detail', machine_name=machine_name, vm_name=vm_name)
 
 # util funcs
 

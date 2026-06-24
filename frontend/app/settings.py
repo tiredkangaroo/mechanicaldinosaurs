@@ -51,7 +51,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'console.middleware.SubdomainMiddleware'
+    # 'console.middleware.SubdomainMiddleware'
 ]
 
 ROOT_URLCONF = 'app.urls'

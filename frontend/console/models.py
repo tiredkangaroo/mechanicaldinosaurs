@@ -8,3 +8,14 @@ class Machine(models.Model):
 
     def __str__(self):
         return self.name
+
+class VMSession(models.Model):
+    vm_name = models.CharField(max_length=64)
+    machine = models.ForeignKey(Machine, on_delete=models.CASCADE)
+    session_id = models.CharField(max_length=36, unique=True)
+    claimed = models.BooleanField(default=False)
+    claimed_by = models.CharField(max_length=256, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.vm_name} on {self.machine.name}"

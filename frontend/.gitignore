@@ -1,1 +1,3 @@
 *.sqlite3
+vm-proxy/server.crt
+vm-proxy/server.key
