@@ -1,8 +1,13 @@
 from django.shortcuts import render, HttpResponse, redirect, reverse
 from .models import Machine, VMSession
-import requests, math, uuid
+import requests, math, uuid, socket
 
 # note: secure this whole thing with auth
+
+# note: make these configurable
+vm_proxy_disconnect_host = "localhost"
+vm_proxy_disconnect_port = 3832  
+vm_proxy_disconnect_secret = "08ba70bc9cb9a486ed0cdc7798e9fb571f75f9e6888d40f07f076679f0781a4ebda8df3a2c6cb2d4bae434cbcbfc3300020214d79c97645daabef348b1bb4c8f"
 
 # Create your views here.
 def index(request):
@@ -228,11 +233,38 @@ def vm_connect(request, machine_name, vm_name):
 def vm_disconnect(request, machine_name, vm_name, session_id):
     try:
         session = VMSession.objects.get(session_id=session_id)
-        # NOTE: if session is claimed, it should send a note to vm-proxy to terminate the connection
-        session.delete()
+        if session.claimed:
+            disconnect_session(session_id)
+        session.delete()    
     except VMSession.DoesNotExist:
         return HttpResponse("session not found", status=404)
     return redirect('vm_detail', machine_name=machine_name, vm_name=vm_name)
+
+
+def disconnect_session(session_id):
+    if len(vm_proxy_disconnect_secret) != 128:
+        print("error: disconnect secret is not 128 bytes.")
+        return
+    if len(session_id) != 36:
+        print("error: session id is not 36 bytes.")
+        return
+
+    try:
+        print(f"Connecting to disconnect service at {vm_proxy_disconnect_host}:{vm_proxy_disconnect_port}...")
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(5.0) # 5 second timeout should be enough i think
+            s.connect((vm_proxy_disconnect_host, vm_proxy_disconnect_port))
+            
+            s.sendall(vm_proxy_disconnect_secret.encode('utf-8'))
+            s.sendall(session_id.encode('utf-8'))
+            
+            print(f"successfully sent disconnect signal for session: {session_id}")
+    except socket.timeout:
+        print("timeout: failed to connect to disconnect service")
+    except ConnectionRefusedError:
+        print("connection refused: disconnect service is not running??")
+    except Exception as e:
+        print(f"unexpected error occurred: {e}")
 
 # util funcs
 
