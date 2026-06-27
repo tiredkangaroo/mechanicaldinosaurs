@@ -232,6 +232,7 @@
             onclick="navigator.clipboard.writeText('{{ item.Container.Id }}')"
             >({{ item.Container.Id|slice:":12" }}..)</span
           >
+          <a href="{% url 'container_detail' machine_name=machine.name container_id=item.Container.Id %}">view</a>
         </h3>
 
         <div class="info-row">

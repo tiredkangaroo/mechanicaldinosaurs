@@ -1,4 +1,5 @@
 from django.shortcuts import render, HttpResponse, redirect, reverse
+from django.http import StreamingHttpResponse
 from .models import Machine, VMSession
 import requests, math, uuid, socket
 from dateutil import parser 
@@ -338,6 +339,31 @@ def container_remove(request, machine_name, container_id):
     except Exception as e:
         return HttpResponse(f"error removing container: {str(e)}", status=503)
     return redirect('machine_detail', machine_name=machine_name)
+
+def stream_container_logs(request, machine_name, container_id):
+    machine = None
+    try:
+        machine = Machine.objects.get(name=machine_name)
+    except Machine.DoesNotExist:
+        return HttpResponse("machine not found", status=404)
+    
+    api_url = f"http://{machine.hostport}/api/containers/{container_id}/logs"
+
+    def log_generator():
+        try:
+            with requests.get(api_url, headers={'Authorization': f'Bearer {machine.secret_key}'}, stream=True, timeout=None) as response:
+                if response.status_code != 200:
+                    yield f"error from server: {response.text}".encode('utf-8')
+                    return
+
+                # keep sending over chunks
+                for chunk in response.iter_content(chunk_size=1024):
+                    if chunk:
+                        yield chunk
+        except requests.exceptions.RequestException as e:
+            yield f"error: {str(e)}".encode('utf-8')
+
+    return StreamingHttpResponse(log_generator(), content_type="text/plain")
 
 # util funcs
 

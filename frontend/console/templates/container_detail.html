@@ -122,6 +122,15 @@
       {% endif %}
     </div>
 
+    <div id="log-section" style="margin-top: 1.5rem">
+      <div style="display: flex; flex-direction: row; align-items: center; gap: 9px; margin-bottom: 5px">
+        <h2>logs</h2>
+        <span>status: <span id="logs-status">loading...</span></span>
+        <button onclick="streamLogs('{{ container.Id }}')">refresh</button>
+      </div>
+      <pre id="log-output" style="background-color: #f0f0f0; padding: 1rem; max-height: 400px; overflow-y: auto"></pre>
+    </div>
+
     <script>
       function toggleEnvironmentVariables() {
         const wrapper = document.getElementById("env-table-wrapper");
@@ -135,6 +144,25 @@
           button.textContent = "show";
         }
       }
+
+      async function streamLogs(containerID) {
+        document.getElementById("log-output").innerText = "";
+        document.getElementById("logs-status").innerText = "loading...";
+        const response = await fetch(`{% url 'stream_container_logs' machine.name container.Id %}`);
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+
+        document.getElementById("logs-status").innerText = "live";
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          document.getElementById("log-output").innerText += chunk;
+        }
+        document.getElementById("logs-status").innerText = "disconnected";
+      }
+      streamLogs("{{ container.Id }}");
     </script>
   </body>
 </html>
