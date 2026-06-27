@@ -137,6 +137,7 @@
         <h1>your containers 🐳</h1>
         <ul class="container-list">
           {% for container in containers %}
+          <a href="{% url 'container_detail' container.machine.name container.Container.Id %}" style="text-decoration: none; color: inherit">
           <li class="container-list-item">
             <div><b>{{ container.Container.Name|slice:"1:" }}</b> on {{ container.machine.name }} (image: {{ container.Container.Config.Image }}) </div>
             <div style="display: flex; justify-content: center; align-items: center; gap: 6px;">
@@ -144,6 +145,7 @@
               {{ container.Container.State.Status }}
             </div>
           </li>
+          </a>
           {% empty %}
           <p style="margin: 0">No containers found.</p>
           {% endfor %}

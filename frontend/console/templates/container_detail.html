@@ -3,9 +3,138 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>container {{ container.Name|slice:"1:" }} on {{ machine.name }}</title>
     {% load static %}
     <link rel="stylesheet" href="{% static 'root.css' %}" />
-    <title>Container {{ container.Container.Name }} on {{ machine.name }}</title>
+    <style>
+      #container-info {
+        margin-top: 1.5rem;
+        text-align: left;
+        max-width: 6000px;
+        display: inline-block;
+      }
+      #container-info p {
+        margin: 6px 0;
+        font-size: 0.95rem;
+      }
+      #container-info b {
+        display: inline-block;
+        width: 120px;
+      }
+      .env-table {
+        margin-top: 10px;
+        border-collapse: collapse;
+        font-family: monospace;
+        font-size: 0.9rem;
+      }
+      .env-table td {
+        padding: 4px 0;
+        word-break: break-all;
+      }
+      .hidden {
+        display: none !important;
+      }
+      #container-actions {
+        display: flex;
+        flex-direction: row;
+        gap: 12px;
+        justify-content: center;
+        align-items: center;
+        margin-top: 1rem;
+      }
+      #container-actions button {
+        padding: 0.45rem 1.2rem;
+      }
+    </style>
   </head>
-  <body></body>
+  <body>
+    <button onclick="history.back()" style="padding: 0.3rem 1rem; margin-bottom: 1rem">back</button>
+
+    <h1 style="text-align: center; font-weight: normal">
+      Container <b>{{ container.Name|slice:"1:" }}</b> on <b>{{ machine.name }}</b>
+    </h1>
+
+    <div style="display: flex; justify-content: center; align-items: center; gap: 9px">
+      <div class="status-indicator status-{{ container.State.Status }}"></div>
+      {{ container.State.Status }}
+    </div>
+    <div id="container-actions">
+      {% if container.State.Status == 'running' %}
+      <form method="post" action="{% url 'container_stop' machine.name container.Id %}">
+        {% csrf_token %}
+        <button type="submit">stop</button>
+      </form>
+      {% else %}
+      <form method="post" action="{% url 'container_start' machine.name container.Id %}">
+        {% csrf_token %}
+        <button type="submit">start</button>
+      </form>
+      {% endif %}
+      <form method="post" action="{% url 'container_remove' machine.name container.Id %}">
+        {% csrf_token %}
+        <button type="submit" style="background-color: red; color: white">delete</button>
+      </form>
+    </div>
+
+    <div style="display: flex; flex-direction: column; align-items: center; text-align: center">
+      <div id="container-info">
+        <p><b>image:</b> {{ container.Config.Image }}</p>
+        <p><b>created:</b> {{ container.created_human }}</p>
+        <p><b>command:</b> {{ container.Path }} {% for arg in container.Args %}{{ arg }} {% endfor %}</p>
+
+        {% if container.compose_svc %}
+        <p><b>compose service:</b> {{ container.compose_svc }}</p>
+        {% endif %} {% for net_name, net_info in container.NetworkSettings.Networks.items %}
+        <p><b>network:</b> {{ net_name }}</p>
+        <p><b>ip Address:</b> {{ net_info.IPAddress }}</p>
+        {% endfor %}
+
+        <p>
+          <b>Port Mapping:</b>
+          {% for port, host_list in container.NetworkSettings.Ports.items %}
+          <!-- weird ah formatter i must add comment here -->
+          {% for host in host_list %} {{ host.HostPort }} &rarr; {{ port }} | {% empty %} {{ port }} (Unbound)
+          <!-- another one - dj khaled -->
+          {% endfor%} {% endfor %}
+        </p>
+        <p><b>Restarts:</b> {{ container.RestartCount }}</p>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 9px; margin: 0">
+      <h2>environment variables</h2>
+      <button id="toggle-env-btn" onclick="toggleEnvironmentVariables()" style="padding: 0.3rem 1rem">show</button>
+    </div>
+
+    <div id="env-table-wrapper" class="hidden">
+      {% if container.Config.Env %}
+      <table class="env-table">
+        <tbody>
+          {% for var in container.Config.Env %}
+          <tr>
+            <td class="env-data">{{ var }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p style="margin: 5px 0 0 0; font-style: italic">No environment variables found.</p>
+      {% endif %}
+    </div>
+
+    <script>
+      function toggleEnvironmentVariables() {
+        const wrapper = document.getElementById("env-table-wrapper");
+        const button = document.getElementById("toggle-env-btn");
+
+        if (wrapper.classList.contains("hidden")) {
+          wrapper.classList.remove("hidden");
+          button.textContent = "hide";
+        } else {
+          wrapper.classList.add("hidden");
+          button.textContent = "show";
+        }
+      }
+    </script>
+  </body>
 </html>

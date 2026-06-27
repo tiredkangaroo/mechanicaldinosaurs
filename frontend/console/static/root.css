@@ -30,6 +30,6 @@ button:hover {
     background-color: green;
 }
 
-.status-stopped {
-    background-color: red;
+.status-stopped, .status-exited {
+    background-color: gray;
 }

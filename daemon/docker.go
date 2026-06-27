@@ -149,7 +149,9 @@ func (ds *DockerService) GetContainer(ctx context.Context, containerID string) (
 }
 
 func (ds *DockerService) ListContainers(ctx context.Context) ([]docker.ContainerInspectResult, error) {
-	containers, err := ds.client.ContainerList(ctx, docker.ContainerListOptions{})
+	containers, err := ds.client.ContainerList(ctx, docker.ContainerListOptions{
+		All: true,
+	})
 	if err != nil {
 		return nil, err
 	}

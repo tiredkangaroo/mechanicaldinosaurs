@@ -1,7 +1,7 @@
 from django.shortcuts import render, HttpResponse, redirect, reverse
 from .models import Machine, VMSession
 import requests, math, uuid, socket
-
+from dateutil import parser 
 # note: secure this whole thing with auth
 
 # note: make these configurable
@@ -282,7 +282,62 @@ def disconnect_session(session_id):
         print(f"unexpected error occurred: {e}")
 
 def container_detail(request, machine_name, container_id):
-    pass
+    machine = None
+    try:
+        machine = Machine.objects.get(name=machine_name)
+    except Machine.DoesNotExist:
+        return HttpResponse("machine not found", status=404)
+    
+    container = None
+    try:
+        container = requests.get(f"http://{machine.hostport}/api/containers/get?id={container_id}", headers={'Authorization': f'Bearer {machine.secret_key}'}).json()
+    except Exception as e:
+        return HttpResponse(f"error fetching container details: {str(e)}", status=503)
+    
+    # 2026-03-20T19:48:39.511080907Z -> 
+    container['Container']['created_human'] = parser.parse(container['Container']['Created']).strftime("%B %d, %Y, %H:%M:%S")
+
+    container['Container']['compose_svc'] = container['Container']['Config']['Labels'].get('com.docker.compose.service', None)
+    return render(request, 'container_detail.html', {'machine': machine, 'container': container['Container']})
+
+def container_start(request, machine_name, container_id):
+    machine = None
+    try:
+        machine = Machine.objects.get(name=machine_name)
+    except Machine.DoesNotExist:
+        return HttpResponse("machine not found", status=404)
+    
+    try:
+        requests.post(f"http://{machine.hostport}/api/containers/start", headers={'Authorization': f'Bearer {machine.secret_key}'}, json={'id': container_id})
+    except Exception as e:
+        return HttpResponse(f"error starting container: {str(e)}", status=503)
+    return redirect('container_detail', machine_name=machine_name, container_id=container_id)
+
+def container_stop(request, machine_name, container_id):
+    machine = None
+    try:
+        machine = Machine.objects.get(name=machine_name)
+    except Machine.DoesNotExist:
+        return HttpResponse("machine not found", status=404)
+    
+    try:
+        requests.post(f"http://{machine.hostport}/api/containers/stop", headers={'Authorization': f'Bearer {machine.secret_key}'}, json={'id': container_id})
+    except Exception as e:
+        return HttpResponse(f"error stopping container: {str(e)}", status=503)
+    return redirect('container_detail', machine_name=machine_name, container_id=container_id)
+
+def container_remove(request, machine_name, container_id):
+    machine = None
+    try:
+        machine = Machine.objects.get(name=machine_name)
+    except Machine.DoesNotExist:
+        return HttpResponse("machine not found", status=404)
+    
+    try:
+        requests.post(f"http://{machine.hostport}/api/containers/remove", headers={'Authorization': f'Bearer {machine.secret_key}'}, json={'id': container_id})
+    except Exception as e:
+        return HttpResponse(f"error removing container: {str(e)}", status=503)
+    return redirect('machine_detail', machine_name=machine_name)
 
 # util funcs
 
