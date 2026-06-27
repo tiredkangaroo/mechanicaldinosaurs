@@ -2,6 +2,7 @@ package main
 
 import (
 	"log/slog"
+	"net/http"
 	"os"
 	"path/filepath"
 
@@ -53,6 +54,26 @@ func registerDockerRoutes(api *echo.Group) {
 		return nil, nil // middleware handles the response based on availability, so just return success here
 	})
 
+	server.Handle(dockerRouter, server.GetContainerRequest, func(c echo.Context, req struct{}) (*client.ContainerInspectResult, error) {
+		id := c.QueryParam("id")
+		if id == "" {
+			return nil, echo.NewHTTPError(400, "missing query parameter: id")
+		}
+		res, err := ds.GetContainer(c.Request().Context(), id)
+		return &res, err
+	})
+
+	dockerRouter.GET("/api/containers/:id/logs", func(c echo.Context) error {
+		id := c.Param("id")
+		pipe, err := ds.ContainerLogs(c.Request().Context(), id)
+		if err != nil {
+			return echo.NewHTTPError(500, "failed to get container logs: "+err.Error())
+		}
+		defer pipe.Close()
+		// although c.Stream accepts an io.Reader, the pipe will still be closed when the context gets canceled (per the docs)
+		return c.Stream(http.StatusOK, "text/plain", pipe)
+	})
+
 	server.Handle(dockerRouter, server.ListContainersRequest, func(c echo.Context, req struct{}) (*[]client.ContainerInspectResult, error) {
 		containers, err := ds.ListContainers(c.Request().Context())
 		if err != nil {
@@ -61,8 +82,8 @@ func registerDockerRoutes(api *echo.Group) {
 		return &containers, nil
 	})
 
-	server.Handle(dockerRouter, server.CreateContainerRequest, func(c echo.Context, req server.CreateContainerReq) (*struct{}, error) {
-		_, err := ds.CreateContainer(c.Request().Context(), req.ContainerConfig)
+	server.Handle(dockerRouter, server.CreateContainerRequest, func(c echo.Context, req server.ContainerConfig) (*struct{}, error) {
+		_, err := ds.CreateContainer(c.Request().Context(), req)
 		if err != nil {
 			return nil, err
 		}

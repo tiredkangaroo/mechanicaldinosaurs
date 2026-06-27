@@ -144,6 +144,10 @@ func (ds *DockerService) ContainerLogs(ctx context.Context, containerID string) 
 	return pipe, nil
 }
 
+func (ds *DockerService) GetContainer(ctx context.Context, containerID string) (docker.ContainerInspectResult, error) {
+	return ds.client.ContainerInspect(ctx, containerID, docker.ContainerInspectOptions{})
+}
+
 func (ds *DockerService) ListContainers(ctx context.Context) ([]docker.ContainerInspectResult, error) {
 	containers, err := ds.client.ContainerList(ctx, docker.ContainerListOptions{})
 	if err != nil {

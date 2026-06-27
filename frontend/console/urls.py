@@ -14,5 +14,6 @@ urlpatterns = [
     path("machine/<str:machine_name>/vms/<str:vm_name>/delete", views.vm_delete, name="vm_delete"),
     path("machine/<str:machine_name>/vms/<str:vm_name>/connect", views.vm_connect, name="vm_connect"),
     path("machine/<str:machine_name>/vms/<str:vm_name>/<str:session_id>/disconnect", views.vm_disconnect, name="vm_disconnect"),
+    path("machine/<str:machine_name>/containers/<str:container_id>", views.container_detail, name="container_detail"),
     # path("vms/", views.vms, name="vms")
 ]

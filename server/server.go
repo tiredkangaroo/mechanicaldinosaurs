@@ -162,11 +162,7 @@ var ListContainersRequest = StaticRequestInfo[struct{}, []client.ContainerInspec
 	Path:   "/api/containers/list",
 }
 
-type CreateContainerReq struct {
-	ContainerConfig // Embedded from your existing server.ContainerConfig
-}
-
-var CreateContainerRequest = StaticRequestInfo[CreateContainerReq, struct{}]{
+var CreateContainerRequest = StaticRequestInfo[ContainerConfig, struct{}]{
 	Method: "POST",
 	Path:   "/api/containers/create",
 }
@@ -175,6 +171,10 @@ type ContainerTargetReq struct {
 	ID string `json:"id"`
 }
 
+var GetContainerRequest = StaticRequestInfo[struct{}, client.ContainerInspectResult]{
+	Method: "GET",
+	Path:   "/api/containers/get",
+}
 var StartContainerRequest = StaticRequestInfo[ContainerTargetReq, struct{}]{
 	Method: "POST",
 	Path:   "/api/containers/start",

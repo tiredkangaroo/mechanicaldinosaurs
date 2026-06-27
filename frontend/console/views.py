@@ -281,6 +281,9 @@ def disconnect_session(session_id):
     except Exception as e:
         print(f"unexpected error occurred: {e}")
 
+def container_detail(request, machine_name, container_id):
+    pass
+
 # util funcs
 
 def format_bytes(bytes):
