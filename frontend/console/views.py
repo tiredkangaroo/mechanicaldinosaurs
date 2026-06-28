@@ -180,6 +180,8 @@ def vm_detail(request, machine_name, vm_name):
     
     try:
         vm = requests.get(f"http://{machine.hostport}/api/vms/get?name={vm_name}", headers={'Authorization': f'Bearer {machine.secret_key}'}).json()
+        if vm.get('error'):
+            return HttpResponse(f"error fetching VM details: {vm['error']}", status=503)
     except Exception as e:
         return HttpResponse(f"error fetching VM details: {str(e)}", status=503)
     

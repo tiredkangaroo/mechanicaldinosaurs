@@ -174,7 +174,7 @@ func GetVM(name string) (server.VM, error) {
 
 // returns actualSize & virtualSize of disk in that order
 func GetDiskSize(diskPath string) (int64, int64, error) {
-	cmd := exec.Command("qemu-img", "info", "--output=json", diskPath)
+	cmd := exec.Command("qemu-img", "info", "--output=json", "--force-share", diskPath)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return 0, 0, fmt.Errorf("qemu-img info failed: %s: %w", out, err)
