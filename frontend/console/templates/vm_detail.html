@@ -62,6 +62,16 @@
       <button onclick="window.location.href='{% url 'vm_detail' machine.name vm.config.name %}'">dismiss</button>
     </div>
     {% endif %}
+    <div>
+      <h2>info</h2>
+      <div style="display: flex; flex-direction: column; gap: 6px; margin: 0">
+        <div><b>vCPUs:</b> {{ vm.config.vcpus }}</div>
+        <div><b>memory:</b> {{ vm.config.memory_mib }} MiB</div>
+        <div><b>disk usage:</b> {{ vm.disk_used_gib }} GiB/{{ vm.config.disk_gib }} GiB</div>
+        <div><b>graphics type:</b> {{ vm.config.graphics_type }}</div>
+        <div><b>boot file:</b> {{ vm.config.boot_file }}</div>
+      </div>
+    </div>
     <div style="display: flex; align-items: center; gap: 9px; margin: 0">
       <h2>remote sessions</h2>
       {% if vm.status == 'running' %}
