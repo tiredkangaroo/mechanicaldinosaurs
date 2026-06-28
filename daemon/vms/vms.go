@@ -182,7 +182,7 @@ func GetVM(name string) (server.VM, error) {
 	return server.VM{
 		Config:        cfg,
 		Status:        status,
-		DiskUsedGiB:   uint(diskUsedKiB / (1024 * 1024)),
+		DiskUsedGiB:   uint(diskUsedKiB / (1024 * 1024 * 1024)),
 		MemoryUsedMiB: cfg.MemoryMiB - uint(unusedMemKiB/1024),
 	}, nil
 }
