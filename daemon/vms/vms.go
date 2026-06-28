@@ -137,7 +137,7 @@ func GetVM(name string) (server.VM, error) {
 		return server.VM{}, fmt.Errorf("get VM status: %w", err)
 	}
 
-	var unusedMemKiB uint64
+	var unusedMemKiB, availableMemKiB uint64
 	if status == "running" {
 		stats, err := domain.MemoryStats(0, 0)
 		if err != nil {
@@ -147,16 +147,20 @@ func GetVM(name string) (server.VM, error) {
 			switch libvirt.DomainMemoryStatTags(stat.Tag) {
 			case libvirt.DOMAIN_MEMORY_STAT_UNUSED:
 				unusedMemKiB = stat.Val
+			case libvirt.DOMAIN_MEMORY_STAT_AVAILABLE:
+				availableMemKiB = stat.Val
 			}
 		}
 	}
+	fmt.Println("unusedMemKiB:", unusedMemKiB)
+	fmt.Println("availableMemKiB:", availableMemKiB)
 
 	xmlDesc, err := domain.GetXMLDesc(0)
 	if err != nil {
 		return server.VM{}, fmt.Errorf("get domain XML description: %w", err)
 	}
 
-	cfg, diskUsed, err := GetConfigFromXML(xmlDesc)
+	cfg, diskUsedKiB, err := GetConfigFromXML(xmlDesc)
 	if err != nil {
 		return server.VM{}, fmt.Errorf("get config from XML: %w", err)
 	}
@@ -167,12 +171,12 @@ func GetVM(name string) (server.VM, error) {
 	return server.VM{
 		Config:        cfg,
 		Status:        status,
-		DiskUsedGiB:   uint(diskUsed / (1024 * 1024 * 1024)),
+		DiskUsedGiB:   uint(diskUsedKiB / (1024 * 1024)),
 		MemoryUsedMiB: cfg.MemoryMiB - uint(unusedMemKiB/1024),
 	}, nil
 }
 
-// returns actualSize & virtualSize of disk in that order
+// returns actualSize & virtualSize of disk in that order (in KiB)
 func GetDiskSize(diskPath string) (int64, int64, error) {
 	cmd := exec.Command("qemu-img", "info", "--output=json", "--force-share", diskPath)
 	out, err := cmd.CombinedOutput()
@@ -189,6 +193,7 @@ func GetDiskSize(diskPath string) (int64, int64, error) {
 		return 0, 0, fmt.Errorf("failed to parse qemu-img JSON: %w", err)
 	}
 
+	// numbers are in kib
 	return info.ActualSize, info.VirtualSize, nil
 }
 
