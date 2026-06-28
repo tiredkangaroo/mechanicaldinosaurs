@@ -72,8 +72,17 @@
     </style>
   </head>
   <body>
-    <h1 style="text-align: center">mechanical dinosaurs 🦕</h1>
-
+    <div style="display: flex; flex-direction: row; align-items: center; justify-content: space-between; padding: 20px;">
+      <h1>mechanical dinosaurs 🦕</h1>
+      <div style="display: flex; flex-direction: column; justify-content: center; align-items: end; gap: 10px;">
+        <a href="{% url 'passkeys_mgmt' %}">
+          <button>manage passkeys</button>
+        </a>
+        <a href="{% url 'logout' %}" style="text-decoration: none; color: inherit; margin: 0;">
+          <button>logout</button>
+        </a>
+      </div>
+    </div>
     <dialog popover id="add-machine-dialog">
       <button id="add-machine-dialog-close" popovertarget="add-machine-dialog" popovertargetaction="close">X</button>
       <div id="add-machine-dialog-content">

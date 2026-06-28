@@ -1,0 +1,289 @@
+{% load static %}
+<!-- for transparency: this file was written mostly by AI, i did have to make some small flow changes -->
+<!-- logic is from https://github.com/mkalioby/django-passkeys/blob/main/passkeys/templates/passkeys/manage.html  -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Manage Passkeys</title>
+
+    <link rel="stylesheet" href="{% static 'root.css' %}" />
+    <script src="{% static 'passkeys/js/base64url.js' %}"></script>
+    <script src="{% static 'passkeys/js/helpers.js' %}"></script>
+
+    <style>
+      .container {
+        max-width: 900px;
+        margin: 40px auto;
+        padding: 0 20px;
+      }
+      .header-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 20px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 12px;
+        border-bottom: 1px solid #ddd;
+      }
+      th {
+        background-color: #f5f5f5;
+      }
+      /* Native HTML Dialog Styling */
+      dialog {
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        padding: 24px;
+        width: 400px;
+        max-width: 900px;
+        font-family: inherit;
+      }
+      dialog::backdrop {
+        background: rgba(0, 0, 0, 0.5);
+      }
+      .dialog-footer {
+        margin-top: 20px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+      .text-input {
+        width: 100%;
+        padding: 8px;
+        margin-top: 8px;
+        box-sizing: border-box;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      .btn-danger {
+        background-color: #a30000;
+      }
+      .btn-secondary {
+        background-color: #6c757d;
+      }
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 40px;
+        height: 20px;
+      }
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: 0.3s;
+        border-radius: 20px;
+      }
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 14px;
+        width: 14px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.3s;
+        border-radius: 50%;
+      }
+      input:checked + .slider {
+        background-color: #6d5000;
+      }
+      input:checked + .slider:before {
+        transform: translateX(20px);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header-actions">
+        <button onclick="showEnrollModal()">Add Key</button>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Date Added</th>
+            <th>Platform</th>
+            <th>Last Used</th>
+            <th>Status</th>
+            <th>Delete</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if keys %} {% for key in keys %}
+          <tr>
+            <td>{{ key.name }}</td>
+            <td>{{ key.added_on }}</td>
+            <td>{{ key.platform }}</td>
+            <td>{% if key.last_used %}{{ key.last_used }}{% else %}Never{% endif %}</td>
+            <td>
+              <label class="switch">
+                <input
+                  data-checked="{{ key.enabled }}"
+                  type="checkbox"
+                  id="toggle_{{ key.id }}"
+                  class="switch-input"
+                  onchange="toggleKey({{ key.id }})"
+                />
+                <span class="slider"></span>
+              </label>
+            </td>
+            <td>
+              <button class="btn-danger" onclick="confirmDel({{ key.id }})">Delete</button>
+            </td>
+          </tr>
+          {% endfor %} {% else %}
+          <tr>
+            <td colspan="6" style="text-align: center">You don't have any keys yet.</td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <dialog id="passkeyModal">
+      <h3 id="modalTitle"></h3>
+      <div id="modalBody"></div>
+      <div class="dialog-footer" id="modalFooter"></div>
+    </dialog>
+
+    <script>
+      for (const chk of document.getElementsByClassName("switch-input")) {
+        const isChecked = chk.dataset.checked === "True";
+        chk.checked = isChecked;
+      }
+
+      const modal = document.getElementById('passkeyModal');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalBody = document.getElementById('modalBody');
+      const modalFooter = document.getElementById('modalFooter');
+
+
+
+      // Helper to adjust original backend data objects
+      const MakeCredReq = (makeCredReq) => {
+          makeCredReq.publicKey.challenge = base64url.decode(makeCredReq.publicKey.challenge);
+          makeCredReq.publicKey.user.id   = base64url.decode(makeCredReq.publicKey.user.id);
+          for(let excludeCred of makeCredReq.publicKey.excludeCredentials) {
+              excludeCred.id = base64url.decode(excludeCred.id);
+          }
+          return makeCredReq;
+      }
+
+      // WebAuthn Passkey Registration Flow
+      function beginReg() {
+          const keyNameInput = document.getElementById('key_name');
+          const feedbackContainer = document.getElementById('res');
+
+          if (!keyNameInput.value.trim()) {
+              feedbackContainer.innerHTML = "<div class='error-flash'>Please enter a valid token name.</div>";
+              return;
+          }
+
+          fetch('{% url "passkeys:reg_begin" %}')
+              .then(response => {
+                  if (response.ok) return response.json().then(req => MakeCredReq(req));
+                  throw new Error('Error getting registration data!');
+              })
+              .then(options => navigator.credentials.create(options))
+              .then(attestation => {
+                  attestation["key_name"] = keyNameInput.value;
+                  return fetch('{% url "passkeys:reg_complete" %}', {
+                      headers: { 'X-CSRFToken': "{{ csrf_token }}", 'Content-Type': 'application/json' },
+                      method: 'POST',
+                      body: JSON.stringify(publicKeyCredentialToJSON(attestation))
+                  });
+              })
+              .then(response => response.json())
+              .then(res => {
+                  if (res["status"] === 'OK') {
+                    window.location = "{% url 'passkeys_mgmt' %}";
+                  } else {
+                    feedbackContainer.innerHTML = `<div class='error-flash'>Registration Failed: ${res["message"]}. <a href='javascript:void(0)' onclick='beginReg()'>Try again</a></div>`;
+                  }
+              })
+              .catch(reason => {
+                  feedbackContainer.innerHTML = `<div class='error-flash'>Registration Failed: ${reason}. <a href='javascript:void(0)' onclick='beginReg()'>Try again</a></div>`;
+              });
+      }
+
+      // Setup Enrollment UI View inside Modal
+      function showEnrollModal() {
+          modalTitle.textContent = "Enter a token name";
+          modalBody.innerHTML = `
+              <p>Please enter a name for your new token</p>
+              <input type="text" placeholder="e.g. Laptop, PC" id="key_name" class="text-input"/><br/>
+              <div id="res"></div>
+          `;
+          modalFooter.innerHTML = `
+              <button class="btn-secondary" onclick="modal.close()">Cancel</button>
+              <button onclick="beginReg()">Start</button>
+          `;
+          modal.showModal();
+      }
+
+      // Action Request: Perform Token Deletion
+      function confirmDel(id) {
+          const formData = new FormData();
+          formData.append('id', id);
+          formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+          fetch("{% url 'passkeys:delKey' %}", {
+              method: "POST",
+              body: formData
+          })
+          .then(res => res.text())
+          .then(data => {
+              alert(data);
+              window.location = "{% url 'passkeys_mgmt' %}";
+          });
+      }
+
+      // Action Request: Toggle Token Status
+      function toggleKey(id) {
+          const formData = new FormData();
+          formData.append('id', id);
+          formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+          fetch("{% url 'passkeys:toggle' %}", {
+              method: "POST",
+              body: formData
+          })
+          .then(response => {
+              if (!response.ok) {
+                  // Revert switch visually if server fails
+                  const chk = document.getElementById(`toggle_${id}`);
+                  chk.checked = !chk.checked;
+              }
+          })
+          .catch(() => {
+              const chk = document.getElementById(`toggle_${id}`);
+              chk.checked = !chk.checked;
+          });
+      }
+
+      // If 'enroll=True' view kwargs are active, auto-start the process when elements mount
+      {% if enroll %}
+          document.addEventListener("DOMContentLoaded", showEnrollModal);
+      {% endif %}
+    </script>
+  </body>
+</html>

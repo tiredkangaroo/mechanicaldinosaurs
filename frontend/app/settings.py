@@ -26,10 +26,18 @@ SECRET_KEY = 'django-insecure-%8k=fmtqrrdia#jm*e=e!+n(!4)-z@=nmbp72_d1w!mc-#o%$j
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [
-    '.localhost'
-]
+if DEBUG:
+    CSRF_TRUSTED_ORIGINS = [
+        "https://localhost:8080",
+    ]
 
+ALLOWED_HOSTS = [
+    '.localhost',
+]
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+
+LOGIN_URL = '/login/'
 
 # Application definition
 
@@ -41,7 +49,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'passkeys',
 ]
+
+AUTHENTICATION_BACKENDS = [
+    'passkeys.backend.PasskeyModelBackend',
+]
+
+FIDO_SERVER_ID = "localhost" 
+FIDO_SERVER_NAME = "mechanical dinosaurs"
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -120,3 +136,4 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = '/static/'
+STATIC_ROOT = path.join(BASE_DIR, 'static')

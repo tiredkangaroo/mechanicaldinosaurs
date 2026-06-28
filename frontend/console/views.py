@@ -3,7 +3,9 @@ from django.http import StreamingHttpResponse
 from .models import Machine, VMSession
 import requests, math, uuid, socket
 from dateutil import parser 
-# note: secure this whole thing with auth
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import authenticate, login, logout
+from passkeys.models import UserPasskey
 
 # note: make these configurable
 vm_proxy_disconnect_host = "localhost"
@@ -11,6 +13,8 @@ vm_proxy_disconnect_port = 3832
 vm_proxy_disconnect_secret = "08ba70bc9cb9a486ed0cdc7798e9fb571f75f9e6888d40f07f076679f0781a4ebda8df3a2c6cb2d4bae434cbcbfc3300020214d79c97645daabef348b1bb4c8f"
 
 # Create your views here.
+
+@login_required
 def index(request):
     machines = Machine.objects.all()
     vms = []
@@ -34,7 +38,33 @@ def index(request):
                 print(f"error fetching containers for machine {machine.name}: {str(e)}")
     return render(request, 'index.html', {'machines': machines, 'vms': vms, 'containers': containers})
 
+def login_view(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = authenticate(request, username=username, password=password)
+        if user is not None and user.is_active:
+            login(request, user)
+            next_url = request.POST.get('next')
+            print(f"user authenticated successfully, redirect? {next_url}")
+            if next_url:
+                return redirect(next_url)
+            else:
+                return redirect('index')
+        else:
+            return render(request, 'login.html', {'error': 'invalid username/password or deactivated account'})
+    return render(request, 'login.html')
 
+def logout_view(request):
+    logout(request)
+    return redirect('login')
+
+@login_required
+def passkeys_mgmt(request):
+    keys = UserPasskey.objects.filter(user=request.user)
+    return render(request, 'passkeys_mgmt.html', {'keys': keys})
+
+@login_required
 def machines(request):
     if request.method == 'POST':
         name = request.POST.get('name')
@@ -46,6 +76,7 @@ def machines(request):
         return redirect('machine_detail', machine_name=name)
     return redirect('index')
 
+@login_required
 def machine_detail(request, machine_name):
     machine = None
     try:
@@ -93,6 +124,7 @@ def machine_detail(request, machine_name):
 
     return render(request, 'machine_detail.html', {'machine': machine})
 
+@login_required
 def machine_delete(request, machine_name):
     try:
         machine = Machine.objects.get(name=machine_name)
@@ -101,6 +133,7 @@ def machine_delete(request, machine_name):
         return HttpResponse("Machine not found", status=404)
     return redirect('index')
 
+@login_required
 def create_vm(request, machine_name):
     machine = None
     try:
@@ -137,6 +170,7 @@ def create_vm(request, machine_name):
         boot_files = requests.get(f"http://{machine.hostport}/api/vms/boot-files", headers={'Authorization': f'Bearer {machine.secret_key}'}).json()
         return render(request, 'create_vm.html', {'machine_name': machine_name, 'boot_files': boot_files, 'max_memory_mb': machine.info.get('memory', 0) // 1024 // 1024, 'max_cpus': machine.info.get('cpu_num', 0), 'max_disk_gb': machine.info.get('storage_capacity', 0) // 1024 // 1024 // 1024})
 
+@login_required
 def vm_detail(request, machine_name, vm_name):
     machine = None
     try:
@@ -157,6 +191,7 @@ def vm_detail(request, machine_name, vm_name):
 
     return render(request, 'vm_detail.html', {'machine': machine, 'vm': vm, 'sessions': sessions, 'error': request.GET.get('error', '')})
 
+@login_required
 def vm_start(request, machine_name, vm_name):
     machine = None
     try:
@@ -173,6 +208,7 @@ def vm_start(request, machine_name, vm_name):
     except Exception as e:
         return HttpResponse(f"error starting VM: {str(e)}", status=503)
 
+@login_required
 def vm_stop(request, machine_name, vm_name):
     machine = None
     try:
@@ -190,6 +226,7 @@ def vm_stop(request, machine_name, vm_name):
     except Exception as e:
         return HttpResponse(f"error stopping VM: {str(e)}", status=503)
 
+@login_required
 def vm_restart(request, machine_name, vm_name):
     machine = None
     try:
@@ -207,6 +244,7 @@ def vm_restart(request, machine_name, vm_name):
     except Exception as e:
         return HttpResponse(f"error restarting VM: {str(e)}", status=503)
 
+@login_required
 def vm_delete(request, machine_name, vm_name):
     machine = None
     try:
@@ -223,6 +261,7 @@ def vm_delete(request, machine_name, vm_name):
     except Exception as e:
         return HttpResponse(f"error deleting VM: {str(e)}", status=503)
 
+@login_required
 def vm_connect(request, machine_name, vm_name):
     machine = None
     try:
@@ -246,6 +285,7 @@ def vm_connect(request, machine_name, vm_name):
     
     return redirect('vm_detail', machine_name=machine_name, vm_name=vm_name)
 
+@login_required
 def vm_disconnect(request, machine_name, vm_name, session_id):
     try:
         session = VMSession.objects.get(session_id=session_id)
@@ -256,7 +296,7 @@ def vm_disconnect(request, machine_name, vm_name, session_id):
         return HttpResponse("session not found", status=404)
     return redirect('vm_detail', machine_name=machine_name, vm_name=vm_name)
 
-
+@login_required
 def disconnect_session(session_id):
     if len(vm_proxy_disconnect_secret) != 128:
         print("error: disconnect secret is not 128 bytes.")
@@ -282,6 +322,7 @@ def disconnect_session(session_id):
     except Exception as e:
         print(f"unexpected error occurred: {e}")
 
+@login_required
 def container_detail(request, machine_name, container_id):
     machine = None
     try:
@@ -301,6 +342,7 @@ def container_detail(request, machine_name, container_id):
     container['Container']['compose_svc'] = container['Container']['Config']['Labels'].get('com.docker.compose.service', None)
     return render(request, 'container_detail.html', {'machine': machine, 'container': container['Container']})
 
+@login_required
 def container_start(request, machine_name, container_id):
     machine = None
     try:
@@ -314,6 +356,7 @@ def container_start(request, machine_name, container_id):
         return HttpResponse(f"error starting container: {str(e)}", status=503)
     return redirect('container_detail', machine_name=machine_name, container_id=container_id)
 
+@login_required
 def container_stop(request, machine_name, container_id):
     machine = None
     try:
@@ -327,6 +370,7 @@ def container_stop(request, machine_name, container_id):
         return HttpResponse(f"error stopping container: {str(e)}", status=503)
     return redirect('container_detail', machine_name=machine_name, container_id=container_id)
 
+@login_required 
 def container_remove(request, machine_name, container_id):
     machine = None
     try:
@@ -340,6 +384,7 @@ def container_remove(request, machine_name, container_id):
         return HttpResponse(f"error removing container: {str(e)}", status=503)
     return redirect('machine_detail', machine_name=machine_name)
 
+@login_required
 def stream_container_logs(request, machine_name, container_id):
     machine = None
     try:
