@@ -137,6 +137,20 @@ func GetVM(name string) (server.VM, error) {
 		return server.VM{}, fmt.Errorf("get VM status: %w", err)
 	}
 
+	var unusedMemKiB uint64
+	if status == "running" {
+		stats, err := domain.MemoryStats(0, 0)
+		if err != nil {
+			return server.VM{}, fmt.Errorf("failed to get memory stats: %w", err)
+		}
+		for _, stat := range stats {
+			switch libvirt.DomainMemoryStatTags(stat.Tag) {
+			case libvirt.DOMAIN_MEMORY_STAT_UNUSED:
+				unusedMemKiB = stat.Val
+			}
+		}
+	}
+
 	xmlDesc, err := domain.GetXMLDesc(0)
 	if err != nil {
 		return server.VM{}, fmt.Errorf("get domain XML description: %w", err)
@@ -151,9 +165,10 @@ func GetVM(name string) (server.VM, error) {
 	// from the config and getting the size of it. idk how to do that but it might be on qemu-img
 
 	return server.VM{
-		Config:      cfg,
-		Status:      status,
-		DiskUsedGiB: uint(diskUsed / (1024 * 1024 * 1024)),
+		Config:        cfg,
+		Status:        status,
+		DiskUsedGiB:   uint(diskUsed / (1024 * 1024 * 1024)),
+		MemoryUsedMiB: cfg.MemoryMiB - uint(unusedMemKiB/1024),
 	}, nil
 }
 
