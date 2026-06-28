@@ -2,12 +2,14 @@ package vms
 
 import (
 	"bytes"
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"io"
 	"log/slog"
 	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -104,14 +106,15 @@ func ListVMs() ([]server.VM, error) {
 			slog.Error("get domain XML description", "name", name, "error", err)
 			continue
 		}
-		cfg, err := GetConfigFromXML(xmlDesc)
+		cfg, diskUsed, err := GetConfigFromXML(xmlDesc)
 		if err != nil {
 			slog.Error("get config from XML", "name", name, "error", err)
 			continue
 		}
 		vms = append(vms, server.VM{
-			Config: cfg,
-			Status: status,
+			Config:      cfg,
+			Status:      status,
+			DiskUsedGiB: uint(diskUsed / (1024 * 1024 * 1024)),
 		})
 	}
 	return vms, nil
@@ -139,7 +142,7 @@ func GetVM(name string) (server.VM, error) {
 		return server.VM{}, fmt.Errorf("get domain XML description: %w", err)
 	}
 
-	cfg, err := GetConfigFromXML(xmlDesc)
+	cfg, diskUsed, err := GetConfigFromXML(xmlDesc)
 	if err != nil {
 		return server.VM{}, fmt.Errorf("get config from XML: %w", err)
 	}
@@ -148,15 +151,36 @@ func GetVM(name string) (server.VM, error) {
 	// from the config and getting the size of it. idk how to do that but it might be on qemu-img
 
 	return server.VM{
-		Config: cfg,
-		Status: status,
+		Config:      cfg,
+		Status:      status,
+		DiskUsedGiB: uint(diskUsed / (1024 * 1024 * 1024)),
 	}, nil
 }
 
-func GetConfigFromXML(xmlDesc string) (server.VMConfig, error) {
+// returns actualSize & virtualSize of disk in that order
+func GetDiskSize(diskPath string) (int64, int64, error) {
+	cmd := exec.Command("qemu-img", "info", "--output=json", diskPath)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return 0, 0, fmt.Errorf("qemu-img info failed: %s: %w", out, err)
+	}
+
+	var info struct {
+		VirtualSize int64  `json:"virtual-size"`
+		ActualSize  int64  `json:"actual-size"`
+		Format      string `json:"format"`
+	}
+	if err := json.Unmarshal(out, &info); err != nil {
+		return 0, 0, fmt.Errorf("failed to parse qemu-img JSON: %w", err)
+	}
+
+	return info.ActualSize, info.VirtualSize, nil
+}
+
+func GetConfigFromXML(xmlDesc string) (server.VMConfig, int64, error) {
 	var d Domain
 	if err := xml.Unmarshal([]byte(xmlDesc), &d); err != nil {
-		return server.VMConfig{}, fmt.Errorf("unmarshal XML: %w", err)
+		return server.VMConfig{}, 0, fmt.Errorf("unmarshal XML: %w", err)
 	}
 	var memoryMiB uint
 	switch d.Memory.Unit {
@@ -167,7 +191,7 @@ func GetConfigFromXML(xmlDesc string) (server.VMConfig, error) {
 	case "GiB":
 		memoryMiB = uint(d.Memory.Value) * 1024
 	default:
-		return server.VMConfig{}, fmt.Errorf("unexpected memory unit in domain XML: %s", d.Memory.Unit)
+		return server.VMConfig{}, 0, fmt.Errorf("unexpected memory unit in domain XML: %s", d.Memory.Unit)
 	}
 	var bootISO Disk
 	var primaryDisk Disk
@@ -179,7 +203,7 @@ func GetConfigFromXML(xmlDesc string) (server.VMConfig, error) {
 		}
 	}
 	if bootISO.Source.File == "" || primaryDisk.Source.File == "" {
-		return server.VMConfig{}, fmt.Errorf("unexpected domain XML: missing boot ISO or primary disk")
+		return server.VMConfig{}, 0, fmt.Errorf("unexpected domain XML: missing boot ISO or primary disk")
 	}
 	var graphicsType string
 	for _, g := range d.Devices.Graphics {
@@ -188,13 +212,18 @@ func GetConfigFromXML(xmlDesc string) (server.VMConfig, error) {
 			break
 		}
 	}
+	actualSize, virtualSize, err := GetDiskSize(primaryDisk.Source.File)
+	if err != nil {
+		return server.VMConfig{}, 0, fmt.Errorf("get disk size: %w", err)
+	}
 	return server.VMConfig{
 		Name:         d.Name,
 		VCPUs:        uint(d.VCPU.Value),
 		MemoryMiB:    memoryMiB,
 		BootFile:     filepath.Base(bootISO.Source.File),
 		GraphicsType: graphicsType,
-	}, nil
+		DiskGiB:      uint(virtualSize / (1024 * 1024 * 1024)), // convert bytes to GiB
+	}, actualSize, nil
 }
 
 // util functio nstuff

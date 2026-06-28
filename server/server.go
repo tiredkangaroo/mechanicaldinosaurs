@@ -56,8 +56,9 @@ type VMConfig struct {
 }
 
 type VM struct {
-	Config VMConfig `json:"config"`
-	Status string   `json:"status"`
+	Config      VMConfig `json:"config"`
+	Status      string   `json:"status"`
+	DiskUsedGiB uint     `json:"disk_used_gib"` // actual used disk space in GiB
 }
 
 type ContainerConfig struct {
