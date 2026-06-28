@@ -145,7 +145,7 @@ func GetVM(name string) (server.VM, error) {
 	var unusedMemKiB, availableMemKiB uint64
 	if status == "running" {
 		fmt.Println("vm running; getting memory stats")
-		stats, err := domain.MemoryStats(0, 0)
+		stats, err := domain.MemoryStats(20, 0)
 		if err != nil {
 			return server.VM{}, fmt.Errorf("failed to get memory stats: %w", err)
 		}
