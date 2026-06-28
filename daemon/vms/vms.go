@@ -137,13 +137,21 @@ func GetVM(name string) (server.VM, error) {
 		return server.VM{}, fmt.Errorf("get VM status: %w", err)
 	}
 
+	err = domain.SetMemoryStatsPeriod(5, libvirt.DOMAIN_MEM_LIVE)
+	if err != nil {
+		return server.VM{}, fmt.Errorf("failed to set memory stats period: %w", err)
+	}
+
 	var unusedMemKiB, availableMemKiB uint64
 	if status == "running" {
+		fmt.Println("vm running; getting memory stats")
 		stats, err := domain.MemoryStats(0, 0)
 		if err != nil {
 			return server.VM{}, fmt.Errorf("failed to get memory stats: %w", err)
 		}
+		fmt.Println("got", len(stats), "memory stats")
 		for _, stat := range stats {
+			fmt.Println("stat.Tag:", stat.Tag, "stat.Val:", stat.Val)
 			switch libvirt.DomainMemoryStatTags(stat.Tag) {
 			case libvirt.DOMAIN_MEMORY_STAT_UNUSED:
 				unusedMemKiB = stat.Val
@@ -151,6 +159,8 @@ func GetVM(name string) (server.VM, error) {
 				availableMemKiB = stat.Val
 			}
 		}
+	} else {
+		fmt.Println("vm not running; skipping memory stats")
 	}
 	fmt.Println("unusedMemKiB:", unusedMemKiB)
 	fmt.Println("availableMemKiB:", availableMemKiB)
@@ -164,6 +174,7 @@ func GetVM(name string) (server.VM, error) {
 	if err != nil {
 		return server.VM{}, fmt.Errorf("get config from XML: %w", err)
 	}
+	fmt.Println("vm", name, "diskUsedKiB:", diskUsedKiB)
 
 	// note: this function needs to populate the size of the disk by getting the primary disk file (boot order 2)
 	// from the config and getting the size of it. idk how to do that but it might be on qemu-img
