@@ -20,8 +20,9 @@
       }
       .header-actions {
         display: flex;
-        justify-content: flex-end;
+        justify-content: space-between;
         margin-bottom: 20px;
+        width: 100%;
       }
       table {
         width: 100%;
@@ -113,6 +114,7 @@
   <body>
     <div class="container">
       <div class="header-actions">
+        <a href="{% url 'index' %}"> home </a>
         <button onclick="showEnrollModal()">Add Key</button>
       </div>
 
