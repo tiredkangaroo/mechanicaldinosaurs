@@ -1,17 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+
 html, body {
-    background-color: #fff8e8;
+    font-family: 'Playfair Display', serif;
 }
 button {
-    background-color: #f0c040;
+    background-color: #6d5000;
+    color: white;
     border: 0px;
     cursor: pointer;
-    transition: box-shadow 0.2s ease-in-out;
     border-radius: 4px;
-}
-button:hover {
-    /* this box shadow is going to look so ai 😭 */
-    box-shadow: 4px 8px 8px rgba(0, 0, 0, 0.1);
-    transition: box-shadow 0.2s ease-in-out;
+    padding: 6px 12px;
 }
 .error-flash {
     background-color: #ffcfcc;
@@ -19,6 +17,8 @@ button:hover {
     padding: 6px 12px;
     border-radius: 5px;
     border: 2px solid #ff0000;
+    margin-top: 10px;
+    margin-bottom: 10px;
 }
 .status-indicator {
     display: inline-block;

@@ -41,7 +41,6 @@
         margin-top: 40px;
       }
       .section-title a {
-        background: #f0c040;
         color: black;
         text-decoration: none;
         padding: 4px 12px;
@@ -67,7 +66,6 @@
       .info-section h2 {
         margin: 0;
         font-size: 1.2rem;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
         padding-bottom: 5px;
       }
       .info-list {
@@ -82,9 +80,6 @@
       }
       .container-card,
       .vm-card {
-        background: rgba(255, 255, 255, 0.6);
-        border: 1px solid rgba(0, 0, 0, 0.05);
-        border-radius: 6px;
         padding: 15px;
         margin-bottom: 15px;
       }
@@ -181,7 +176,7 @@
 
     <div class="section-title">
       <h2>virtual machines</h2>
-      <a href="{% url 'create_vm' machine_name=machine.name %}">create</a>
+      <a href="{% url 'create_vm' machine_name=machine.name %}"><button>create</button></a>
     </div>
 
     {% if machine.vms.error %}
