@@ -8,7 +8,6 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
-	"github.com/moby/moby/client"
 )
 
 type Info struct {
@@ -60,18 +59,6 @@ type VM struct {
 	Status        string   `json:"status"`
 	MemoryUsedMiB uint     `json:"memory_used_mib"` // actual used memory in MiB
 	DiskUsedGiB   uint     `json:"disk_used_gib"`   // actual used disk space in GiB
-}
-
-type ContainerConfig struct {
-	Name          string   `json:"name"`
-	Image         string   `json:"image"`          // e.g. "nginx:latest"
-	ExposedPorts  []string `json:"exposed_ports"`  // list of ports in form "80/tcp", "53/udp", etc.
-	Env           []string `json:"env"`            // list of environment variables in form "KEY=value"
-	Cmd           []string `json:"cmd"`            // command to run in the container on start
-	Volumes       []string `json:"volumes"`        // list of volumes in form "/host/path:/container/path"
-	RestartPolicy string   `json:"restart_policy"` // e.g. "no", "on-failure", "always", "unless-stopped"
-	MaxRetryCount int      `json:"retry_count"`
-	AutoRemove    bool     `json:"auto_remove"` // whether to automatically remove the container when it exits
 }
 
 func Call[Req any, Res any](reqinfo StaticRequestInfo[Req, Res], hostport string, req Req, authorization string) (*Res, error) {
@@ -150,64 +137,6 @@ func (e ErrorResponse) Error() string {
 var GetInfoRequest = StaticRequestInfo[struct{}, Info]{
 	Method: "GET",
 	Path:   "/api/info",
-}
-
-// docker
-
-var GetDockerAvailableRequest = StaticRequestInfo[struct{}, struct{}]{
-	Method: "GET",
-	Path:   "/api/docker/available",
-}
-
-var ListContainersRequest = StaticRequestInfo[struct{}, []client.ContainerInspectResult]{
-	Method: "GET",
-	Path:   "/api/containers/list",
-}
-
-var CreateContainerRequest = StaticRequestInfo[ContainerConfig, struct{}]{
-	Method: "POST",
-	Path:   "/api/containers/create",
-}
-
-type ContainerTargetReq struct {
-	ID string `json:"id"`
-}
-
-var GetContainerRequest = StaticRequestInfo[struct{}, client.ContainerInspectResult]{
-	Method: "GET",
-	Path:   "/api/containers/get",
-}
-var StartContainerRequest = StaticRequestInfo[ContainerTargetReq, struct{}]{
-	Method: "POST",
-	Path:   "/api/containers/start",
-}
-var StopContainerRequest = StaticRequestInfo[ContainerTargetReq, struct{}]{
-	Method: "POST",
-	Path:   "/api/containers/stop",
-}
-var RemoveContainerRequest = StaticRequestInfo[ContainerTargetReq, struct{}]{
-	Method: "POST", // Changed from DELETE since path parameters are removed
-	Path:   "/api/containers/remove",
-}
-
-type ComposeUpReq struct {
-	ProjectName        string `json:"projectName"`
-	ComposeFileContent string `json:"composeFileContent"`
-	ComposeFilePath    string `json:"composeFilePath"`
-}
-
-var ComposeUpRequest = StaticRequestInfo[ComposeUpReq, struct{}]{
-	Method: "POST",
-	Path:   "/api/compose/up",
-}
-
-type ComposeDownReq struct {
-	ProjectName string `json:"projectName"`
-}
-
-var ComposeDownRequest = StaticRequestInfo[ComposeDownReq, struct{}]{
-	Method: "POST",
-	Path:   "/api/compose/down",
 }
 
 // vm

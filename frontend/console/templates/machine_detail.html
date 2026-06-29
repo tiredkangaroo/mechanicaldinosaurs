@@ -114,13 +114,6 @@
     </div>
     {% else %}
     <p class="status-text">vm status: {{machine.vm_status}}</p>
-    {% endif %} {% if machine.docker_status.error %}
-    <div class="error-flash">
-      <h2>an error occurred getting docker status</h2>
-      <p>{{machine.docker_status.error}}</p>
-    </div>
-    {% else %}
-    <p class="status-text">docker status: {{machine.docker_status}}</p>
     {% endif %} {% if machine.info.error %}
     <div class="error-flash">
       <h2>an error occurred getting machine info</h2>
@@ -202,57 +195,6 @@
       </div>
       {% empty %}
       <p style="text-align: center; opacity: 0.7; margin: 0">no virtual machines found on this machine.</p>
-      {% endfor %}
-    </div>
-    {% endif %}
-
-    <div class="section-title">
-      <h2>docker containers 🐳</h2>
-    </div>
-
-    {% if machine.containers.error %}
-    <div class="error-flash" style="width: 50%; margin: 0 auto">
-      <h2>an error occurred getting docker containers</h2>
-      <p>{{machine.containers.error}}</p>
-    </div>
-    {% else %}
-    <div class="containers-wrapper">
-      {% for item in machine.containers %}
-      <div class="container-card">
-        <h3>
-          {{ item.Container.Name|slice:"1:" }}
-          <span
-            style="font-size: 0.85rem; font-weight: normal; opacity: 0.7; cursor: pointer"
-            title="{{ item.Container.Id }}"
-            onclick="navigator.clipboard.writeText('{{ item.Container.Id }}')"
-            >({{ item.Container.Id|slice:":12" }}..)</span
-          >
-          <a href="{% url 'container_detail' machine_name=machine.name container_id=item.Container.Id %}">view</a>
-        </h3>
-
-        <div class="info-row">
-          <div class="info-section">
-            <h2>status</h2>
-            <div class="info-list">
-              <p><b>state:</b> {{ item.Container.State.Status }}</p>
-              <p><b>running:</b> {{ item.Container.State.Running }}</p>
-              <p><b>restarts:</b> {{ item.Container.RestartCount }}</p>
-              <p><b>created:</b> {{ item.Container.Created|slice:":10" }}</p>
-            </div>
-          </div>
-
-          <div class="info-section">
-            <h2>config</h2>
-            <div class="info-list">
-              <p><b>image:</b> {{ item.Container.Config.Image }}</p>
-              <p><b>platform:</b> {{ item.Container.Platform }}</p>
-              <p><b>driver:</b> {{ item.Container.Driver }}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-      {% empty %}
-      <p style="text-align: center; opacity: 0.7; margin: 0">no containers found on this machine.</p>
       {% endfor %}
     </div>
     {% endif %}

@@ -42,14 +42,6 @@ def index(request):
                         vms.append(vm)
             except Exception as e:
                 print(f"error fetching vms for machine {machine.name}: {str(e)}")
-            try:
-                machine.containers = requests.get(f"http://{machine.hostport}/api/containers/list", headers={'Authorization': f'Bearer {machine.secret_key}'}).json()
-                if not getattr(machine.containers, 'error', None):
-                    for container in machine.containers:
-                        container['machine'] = machine
-                        containers.append(container)
-            except Exception as e:
-                print(f"error fetching containers for machine {machine.name}: {str(e)}")
     try:
         pods_list = kube_api.list_pod_for_all_namespaces(watch=False)
         for pod in pods_list.items:
@@ -67,7 +59,7 @@ def index(request):
     pods.sort(key=lambda x: (x['status'], x['created_at'])) # wow thats cool how easy ts was
     
     notifications_unread = Notification.objects.filter(read=False)
-    return render(request, 'index.html', {'machines': machines, 'vms': vms, 'containers': containers, 'num_notifications_unread': len(notifications_unread), 'pods': pods})
+    return render(request, 'index.html', {'machines': machines, 'vms': vms, 'num_notifications_unread': len(notifications_unread), 'pods': pods})
 
 def login_view(request):
     if request.method == 'POST':
@@ -137,21 +129,7 @@ def machine_detail(request, machine_name):
             except Exception as e:
                 machine.vms = {'error': str(e)}
     except Exception as e:
-        machine.vm_status = {'error': str(e)}
-
-    try:
-        resp = requests.get(f"http://{machine.hostport}/api/docker/available", headers={'Authorization': f'Bearer {machine.secret_key}'})
-        if resp.status_code == 503:
-            machine.docker_status = "not available ❌"
-        else:
-            machine.docker_status = "available ✅"
-            try:
-                machine.containers = requests.get(f"http://{machine.hostport}/api/containers/list", headers={'Authorization': f'Bearer {machine.secret_key}'}).json()
-            except Exception as e:
-                machine.containers = {'error': str(e)}
-    except Exception as e:
-        machine.docker_status = {'error': str(e)}
-    
+        machine.vm_status = {'error': str(e)}    
 
     return render(request, 'machine_detail.html', {'machine': machine})
 
