@@ -7,33 +7,33 @@
     {% load static %}
     <link rel="stylesheet" href="{% static 'root.css' %}" />
     <style>
-      .machines, .vms, .containers {
+      .machines, .vms, .containers, .pods {
         background-color: #f7e9c1;
         padding: 20px;
       }
-      .machines-title, .vms-title {
+      .machines-title, .vms-title, .containers-title, .pods-title {
         display: flex;
         flex-direction: row;
         justify-content: space-between;
         align-items: center;
       }
-      #add-machine-button, #add-vm-button {
+      #add-machine-button, #add-vm-button, #add-container-button, #add-pod-button {
         font-size: 150%;
         padding-left: 0.9rem;
         padding-right: 0.9rem;
       }
-      #add-machine-dialog, #add-vm-dialog {
+      #add-machine-dialog, #add-vm-dialog, #add-container-dialog {
         width: 45%;
         text-align: right;
         padding-bottom: 2rem;
       }
-      #add-machine-dialog-close, #add-vm-dialog-close {
+      #add-machine-dialog-close, #add-vm-dialog-close, #add-container-dialog-close {
         padding-left: 0.7rem;
         padding-right: 0.7rem;
         padding-top: 0.4rem;
         padding-bottom: 0.4rem;
       }
-      #add-machine-dialog-content, #add-vm-dialog-content {
+      #add-machine-dialog-content, #add-vm-dialog-content, #add-container-dialog-content {
         display: flex;
         flex-direction: column;
         text-align: center;
@@ -55,14 +55,14 @@
         font-size: 16px;
         cursor: pointer;
       }
-      .machine-list, .vm-list, .container-list {
+      .machine-list, .vm-list, .container-list, .pod-list {
         list-style-type: none;
         padding: 0;
         display: flex;
         flex-direction: column;
         gap: 10px;
       }
-      .machine-list-item, .vm-list-item, .container-list-item {
+      .machine-list-item, .vm-list-item, .container-list-item, .pod-list-item {
         background-color: #f0f0f0;
         padding: 10px;
         display: flex;
@@ -168,7 +168,10 @@
         </div>
 
       <div class="containers">
-        <h1>your containers 🐳</h1>
+        <div class="containers-title">
+          <h1>your containers</h1>
+          <button id="add-container-button" popovertarget="add-container-dialog">+</button>
+        </div>
         <ul class="container-list">
           {% for container in containers %}
           <a href="{% url 'container_detail' container.machine.name container.Container.Id %}" style="text-decoration: none; color: inherit">
@@ -185,6 +188,26 @@
           {% endfor %}
         </ul>
       </div>
+      <div class="pods">
+        <div class="pods-title">
+          <h1>your pods</h1>
+          <button id="add-pod-button" popovertarget="add-pod-dialog">+</button>
+        </div>
+        <ul class="pod-list">
+          {% for pod in pods %}
+          <a href="{% url 'pod_detail' pod.namespace pod.name %}" style="text-decoration: none; color: inherit">
+            <li class="pod-list-item">
+              <div><b>{{ pod.name }}</b></div>
+              <div style="display: flex; justify-content: center; align-items: center; gap: 6px;">
+              <div class="status-indicator status-{{ pod.status }}"></div>
+              {{ pod.status }}
+              </div>
+            </li>
+          </a>
+          {% empty %}
+          <p style="margin: 0">No pods found.</p>
+          {% endfor %}
+        </ul>
       </div>
     <script>
       function toggleAddMachineDialog() {

@@ -33,6 +33,10 @@ sudo virsh net-autostart default
 sudo apt-get install libvirt-dev libvirt-clients
 ```
 
+```
+curl -sfL https://get.k3s.io | K3S_URL=https://<control machine ip>:6443 K3S_TOKEN=<token from /var/lib/rancher/k3s/server/node-token> sh -
+```
+
 get the windows virtio drivers here: https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso and put them in as $MECHANICAL_DINOSAURS_DATA/drivers/virtio-win.iso
 
 to do list:
@@ -41,4 +45,12 @@ to do list:
 - notification system on the ui & by email
 - add notification for when x goes down, etc.
 - add dns & cloudflare tunnel stuff
-- probably shift to kube
+- shift to k3s; phase out regular ol docker containers and compose
+
+setting up the daemon?
+
+- make sure virtualization is enabled
+- install libvirt and stuff (`sudo apt-get install libvirt-dev libvirt-clients`)
+- if this daemon is the master control plane? install k3s: `curl -sfL https://get.k3s.io | sh -`
+- if the daemon is running on raspi (or if cgroups is disabled for any reason), you have to enable cgroups by adding cgroup_memory=1 cgroup_enable=memory to /boot/firmware/cmdline.txt (https://docs.k3s.io/installation/requirements?os=pi)
+- copy over /etc/rancher/k3s/k3s.yaml to frontend

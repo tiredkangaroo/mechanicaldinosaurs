@@ -33,8 +33,12 @@ button {
     height: 0.8rem;
 }
 
-.status-running {
+.status-running, .status-Running {
     background-color: green;
+}
+
+.status-Succeeded {
+    background-color: blue;
 }
 
 .status-stopped, .status-exited {

@@ -4,3 +4,4 @@ vm-proxy/server.key
 static
 dev-test-proxy/server.crt
 dev-test-proxy/server.key
+k3s-config.yaml
