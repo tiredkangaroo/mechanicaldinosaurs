@@ -1,16 +1,22 @@
 from django.shortcuts import render, HttpResponse, redirect, reverse
 from django.http import StreamingHttpResponse
-from .models import Machine, VMSession
+from .models import Machine, VMSession, Notification
 import requests, math, uuid, socket
 from dateutil import parser 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
+# from django.core.mail import send_mail
+# from django.conf import settings
 from passkeys.models import UserPasskey
+from os import environ
+import resend
 
 # note: make these configurable
 vm_proxy_disconnect_host = "localhost"
 vm_proxy_disconnect_port = 3832  
 vm_proxy_disconnect_secret = "08ba70bc9cb9a486ed0cdc7798e9fb571f75f9e6888d40f07f076679f0781a4ebda8df3a2c6cb2d4bae434cbcbfc3300020214d79c97645daabef348b1bb4c8f"
+
+resend.api_key = environ.get("RESEND_API_KEY")
 
 # Create your views here.
 
@@ -36,7 +42,8 @@ def index(request):
                         containers.append(container)
             except Exception as e:
                 print(f"error fetching containers for machine {machine.name}: {str(e)}")
-    return render(request, 'index.html', {'machines': machines, 'vms': vms, 'containers': containers})
+    notifications_unread = Notification.objects.filter(read=False)
+    return render(request, 'index.html', {'machines': machines, 'vms': vms, 'containers': containers, 'num_notifications_unread': len(notifications_unread)})
 
 def login_view(request):
     if request.method == 'POST':
@@ -412,8 +419,30 @@ def stream_container_logs(request, machine_name, container_id):
 
     return StreamingHttpResponse(log_generator(), content_type="text/plain")
 
-# util funcs
+# test view; not to be used in prod
+@login_required
+def send_email(request):
+    if request.method == 'POST':
+        subject = request.POST.get('subject')
+        message = request.POST.get('message')
+        recipient = request.POST.get('recipient')
+        try:
+            resend.Emails.send(resend.Emails.SendParams({
+                "from": "Infrastructure <infra@mechanicaldinosaurs.net>",
+                "to": [recipient],
+                "subject": subject,
+                "text": message,
+            }))
+        except Exception as e:
+            print(f"error sending email: {str(e)}")
+            return HttpResponse("error sending email: " + str(e), status=500)
+    return render(request, 'send_email.html')
 
+def notifications(request):
+    notifications = Notification.objects.all().order_by('-created_at')
+    return render(request, 'notifications.html', {'notifications': notifications})
+
+# util funcs
 def format_bytes(bytes):
     if bytes == 0:
         return "0 Bytes"

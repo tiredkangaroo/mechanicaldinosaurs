@@ -23,4 +23,6 @@ urlpatterns = [
     path("machine/<str:machine_name>/containers/<str:container_id>/remove", views.container_remove, name="container_remove"),
     path("machine/<str:machine_name>/containers/<str:container_id>/stream_logs", views.stream_container_logs, name="stream_container_logs"),
     # path("vms/", views.vms, name="vms")
+    path('send-email/', views.send_email, name='send_email'), # should be removed in prod
+    path('notifications/', views.notifications, name='notifications'),
 ]

@@ -19,3 +19,13 @@ class VMSession(models.Model):
 
     def __str__(self):
         return f"{self.vm_name} on {self.machine.name}"
+
+# potentially tie a notification to a user
+class Notification(models.Model):
+    title = models.CharField(max_length=256)
+    message = models.TextField()
+    read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title

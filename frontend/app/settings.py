@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
-from os import path
+from os import path, environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -137,3 +137,11 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = path.join(BASE_DIR, 'static')
+
+# email
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = environ.get('EMAIL_HOST')
+# EMAIL_PORT = environ.get('EMAIL_PORT')
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = environ.get('EMAIL_HOST_USER')
+# EMAIL_HOST_PASSWORD = environ.get('EMAIL_HOST_PASSWORD')

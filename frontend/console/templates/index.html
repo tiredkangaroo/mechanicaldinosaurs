@@ -11,29 +11,29 @@
         background-color: #f7e9c1;
         padding: 20px;
       }
-      .machines-title {
+      .machines-title, .vms-title {
         display: flex;
         flex-direction: row;
         justify-content: space-between;
         align-items: center;
       }
-      #add-machine-button {
+      #add-machine-button, #add-vm-button {
         font-size: 150%;
         padding-left: 0.9rem;
         padding-right: 0.9rem;
       }
-      #add-machine-dialog {
+      #add-machine-dialog, #add-vm-dialog {
         width: 45%;
         text-align: right;
         padding-bottom: 2rem;
       }
-      #add-machine-dialog-close {
+      #add-machine-dialog-close, #add-vm-dialog-close {
         padding-left: 0.7rem;
         padding-right: 0.7rem;
         padding-top: 0.4rem;
         padding-bottom: 0.4rem;
       }
-      #add-machine-dialog-content {
+      #add-machine-dialog-content, #add-vm-dialog-content {
         display: flex;
         flex-direction: column;
         text-align: center;
@@ -69,6 +69,9 @@
         flex-direction: row;
         justify-content: space-between;
       }
+      #machine-select {
+        padding: 8px;
+      }
     </style>
   </head>
   <body>
@@ -76,10 +79,16 @@
       <h1>mechanical dinosaurs 🦕</h1>
       <div style="display: flex; flex-direction: column; justify-content: center; align-items: end; gap: 10px;">
         <a href="{% url 'passkeys_mgmt' %}">
-          <button>manage passkeys</button>
+          <button>
+            <img src="{% static 'passkeys/imgs/FIDO-Passkey_Icon-White.png' %}" alt="passkey icon" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 5px;" />
+            manage passkeys
+          </button>
+        </a>
+        <a href="{% url 'notifications' %}">
+          <button>🔔 notifications ({{ num_notifications_unread }})</button>
         </a>
         <a href="{% url 'logout' %}" style="text-decoration: none; color: inherit; margin: 0;">
-          <button>logout</button>
+          <button style="background-color: red;">logout</button>
         </a>
       </div>
     </div>
@@ -94,6 +103,19 @@
           <input type="password" name="secret_key" placeholder="secret key" required />
           <button type="submit">add da machine</button>
         </form>
+      </div>
+    </dialog>
+
+    <dialog popover id="add-vm-dialog">
+      <button id="add-vm-dialog-close" popovertarget="add-vm-dialog" popovertargetaction="close">X</button>
+      <div id="add-vm-dialog-content">
+        <h1>choose a machine for the VM</h1>
+        <select id="machine-select" name="machine" onchange="window.location.href=this.value">
+          <option value="" disabled selected>Select a machine</option>
+          {% for machine in machines %}
+            <option value="{% url 'create_vm' machine.name %}">{{ machine.name }} ({{ machine.hostport }})</option>
+          {% endfor %}
+        </select>
       </div>
     </dialog>
 
@@ -125,7 +147,10 @@
       </div>
       
       <div class="vms">
-        <h1>your vms</h1>
+        <div class="vms-title">
+          <h1>your vms</h1>
+          <button id="add-vm-button" popovertarget="add-vm-dialog">+</button>
+        </div>
         <ul class="vm-list">
           {% for vm in vms %}
           <a href="{% url 'vm_detail' vm.machine.name vm.config.name %}" style="text-decoration: none; color: inherit">
