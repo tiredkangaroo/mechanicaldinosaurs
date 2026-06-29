@@ -28,9 +28,7 @@ button {
     margin-bottom: 10px;
 }
 .status-indicator {
-    display: inline-block;
-    width: 0.8rem;
-    height: 0.8rem;
+    padding: 0.4em;
 }
 
 .status-running, .status-Running {

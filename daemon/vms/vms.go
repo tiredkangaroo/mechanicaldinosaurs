@@ -137,13 +137,13 @@ func GetVM(name string) (server.VM, error) {
 		return server.VM{}, fmt.Errorf("get VM status: %w", err)
 	}
 
-	err = domain.SetMemoryStatsPeriod(5, libvirt.DOMAIN_MEM_LIVE)
-	if err != nil {
-		return server.VM{}, fmt.Errorf("failed to set memory stats period: %w", err)
-	}
-
+	// note: get cpu stats here as well
 	var unusedMemKiB, availableMemKiB uint64
 	if status == "running" {
+		err = domain.SetMemoryStatsPeriod(5, libvirt.DOMAIN_MEM_LIVE)
+		if err != nil {
+			return server.VM{}, fmt.Errorf("failed to set memory stats period: %w", err)
+		}
 		fmt.Println("vm running; getting memory stats")
 		stats, err := domain.MemoryStats(20, 0)
 		if err != nil {

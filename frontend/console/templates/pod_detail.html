@@ -9,9 +9,6 @@
     <link rel="stylesheet" href="{% static 'root.css' %}" />
     <style>
       body {
-        max-width: 800px;
-        margin: 40px auto;
-        padding: 0 20px;
         color: #222;
         line-height: 1.6;
       }
@@ -137,7 +134,10 @@
   </head>
   <body>
     <h1>pod <span>{{ pod.name }}</span> on {{ pod.namespace }}</h1>
-
+    <div style="display: flex; justify-content: center; align-items: center; gap: 6px">
+      <div class="status-indicator status-{{ pod.status }}"></div>
+      {{ pod.status }}
+    </div>
     <h2>overview</h2>
     <table>
       <tr>
@@ -210,7 +210,7 @@
     {% for container in pod.containers %}
     <div class="container-block">
       <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px">
-        <h3>{{ container.name }}</h3>
+        <h3 style="margin: 0">{{ container.name }}</h3>
         <div style="display: flex; flex-direction: row; align-items: center; gap: 6px">
           {% if container.status.state.status == "running" %}
           <div class="status-indicator status-running"></div>
@@ -284,9 +284,8 @@
       {% endif %} {% if container.volume_mounts %}
       <p>
         <b>volume mounts:</b>
-        <button onclick="toggleSection('vol-{{ forloop.counter }}', this)">show</button>
       </p>
-      <div id="vol-{{ forloop.counter }}" style="display: none">
+      <div id="vol-{{ forloop.counter }}">
         <table>
           <thead>
             <tr>
