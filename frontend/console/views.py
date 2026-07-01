@@ -615,7 +615,7 @@ def pod_deploy(request):
 
         # boom wow a deployment
         try:
-            apps_v1.create_namespaced_deployment(namespace=namespace, body=deployment)
+            kube_app_api.create_namespaced_deployment(namespace=namespace, body=deployment)
         except ApiException as e:
             return HttpResponse(f"error creating deployment: {str(e)}", status=503)
 
@@ -635,7 +635,7 @@ def pod_deploy(request):
             )
 
             try:
-                core_v1.create_namespaced_service(namespace=namespace, body=service)
+                kube_core_api.create_namespaced_service(namespace=namespace, body=service)
             except ApiException as e:
                 return HttpResponse(f"error creating service: {str(e)}", status=503) # imagine getting this far just to have the service creation fail
 
