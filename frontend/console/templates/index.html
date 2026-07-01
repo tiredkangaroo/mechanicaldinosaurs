@@ -176,7 +176,7 @@
           {% for pod in pods %}
           <a href="{% url 'pod_detail' pod.namespace pod.name %}" style="text-decoration: none; color: inherit">
             <li class="pod-list-item">
-              <div><b>{{ pod.name }}</b></div>
+              <div><b style="font-family: 'Merriweather';">{{ pod.name }}</b></div>
               <div style="display: flex; justify-content: center; align-items: center; gap: 6px;">
               <div class="status-indicator status-{{ pod.status }}"></div>
               {{ pod.status }}

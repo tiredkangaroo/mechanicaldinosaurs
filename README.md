@@ -41,11 +41,10 @@ get the windows virtio drivers here: https://fedorapeople.org/groups/virt/virtio
 
 to do list:
 
+- deploy
+- automations
 - secure connections (using custom certs?) from machines
-- notification system on the ui & by email
-- add notification for when x goes down, etc.
 - add dns & cloudflare tunnel stuff
-- shift to k3s; phase out regular ol docker containers and compose
 
 setting up the daemon?
 
