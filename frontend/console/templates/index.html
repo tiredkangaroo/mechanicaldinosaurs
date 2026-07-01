@@ -170,7 +170,9 @@
         <div class="pods">
         <div class="pods-title">
           <h1>your pods</h1>
-          <button id="add-pod-button" popovertarget="add-pod-dialog">+</button>
+          <a href="{% url 'pod_deploy' %}">
+            <button id="add-pod-button">+</button>
+          </a>
         </div>
         <ul class="pod-list">
           {% for pod in pods %}

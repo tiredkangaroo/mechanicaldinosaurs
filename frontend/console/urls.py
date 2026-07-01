@@ -21,4 +21,5 @@ urlpatterns = [
     path('send-email/', views.send_email, name='send_email'), # should be removed in prod
     path('notifications/', views.notifications, name='notifications'),
     path('k3/<str:namespace>/<str:pod_name>/', views.pod_detail, name='pod_detail'),
+    path('k3/deploy/', views.pod_deploy, name='pod_deploy'),
 ]

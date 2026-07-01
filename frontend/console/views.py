@@ -23,7 +23,8 @@ resend.api_key = environ.get("RESEND_API_KEY")
 
 k3_config_path = path.join(settings.BASE_DIR, 'k3s-config.yaml')
 config.load_kube_config(config_file=k3_config_path)
-kube_api = client.CoreV1Api()
+kube_core_api = client.CoreV1Api()
+kube_app_api = client.AppsV1Api()
 
 # Create your views here.
 
@@ -43,7 +44,7 @@ def index(request):
             except Exception as e:
                 print(f"error fetching vms for machine {machine.name}: {str(e)}")
     try:
-        pods_list = kube_api.list_pod_for_all_namespaces(watch=False)
+        pods_list = kube_core_api.list_pod_for_all_namespaces(watch=False)
         for pod in pods_list.items:
             pods.append({
                 "name": pod.metadata.name,
@@ -449,7 +450,7 @@ def notifications(request):
 @login_required
 def pod_detail(request, namespace, pod_name):
     try:
-        pod = kube_api.read_namespaced_pod(name=pod_name, namespace=namespace)
+        pod = kube_core_api.read_namespaced_pod(name=pod_name, namespace=namespace)
     except ApiException as e:
         return HttpResponse(f"error fetching pod details: {str(e)}", status=503)
 
@@ -529,6 +530,116 @@ def pod_detail(request, namespace, pod_name):
         pod_info["containers"].append(container_info)
 
     return render(request, 'pod_detail.html', {'pod': pod_info})
+
+def pod_deploy(request):
+    if request.method == 'POST':
+        name = request.POST.get('name').lower().strip()
+        image = request.POST.get('image')
+        
+        # resource stuff
+        cpu_resource_request = request.POST.get('cpuResourceRequest')
+        memory_resource_request = request.POST.get('memoryResourceRequest')
+        cpu_resource_limit = request.POST.get('cpuResourceLimit')
+        memory_resource_limit = request.POST.get('memoryResourceLimit')
+
+        replicas = int(request.POST.get('replicas', 1))
+        namespace = request.POST.get('namespace', 'default')
+        env_vars = request.POST.get('env_vars') # format: k1=v1,k2=v2
+
+        # we have to create a service alongside the deployment if there's any ports to expose
+        expose_externally = request.POST.get('expose_externally') == 'true'
+        ports = request.POST.get('ports') # map of containerPort:hostPort or containerPort:0 if not to be exposed but should still be marked to kube
+
+        env = []
+        if env_vars_raw: # i probably don't need to check this but just in case
+            for item in env_vars_raw.split(','):
+                if '=' in item:
+                    k, v = item.split('=', 1)
+                    env.append(client.V1EnvVar(name=k.strip(), value=v.strip()))
+                else:
+                    return HttpResponse(f"invalid env var format: {item}", status=400) # shouldn't happen if frontend works correctly
+        
+        container_ports = []
+        service_ports = []
+
+        if ports_raw: # again probably don't need to check this lol
+            for mapping in ports_raw.split(','):
+                if ':' in mapping:
+                    c_port, s_port = mapping.split(':')
+                    c_port, s_port = int(c_port.strip()), int(s_port.strip())
+
+                    # mark the container port on the container spec 
+                    container_ports.append(client.V1ContainerPort(container_port=c_port))
+
+                    # if a service port (for exposing) has been specified, add it                    
+                    if s_port > 0:
+                        service_ports.append(client.V1ServicePort(
+                            name=f"port-{c_port}", # name for the port will be the container port it is mapped to
+                            port=s_port,         # Port exposed on the Service network
+                            target_port=c_port   # Target port inside the container
+                        ))
+
+        # resource requests and limits
+        resources = client.V1ResourceRequirements(
+            requests={"cpu": cpu_resource_request, "memory": memory_resource_request},
+            limits={"cpu": cpu_resource_limit, "memory": memory_resource_limit}
+        )
+
+        # container spec -> pod templ spec -> deployment spec -> deployment
+
+        container = client.V1Container(
+            name=f"{name}-container",
+            image=image,
+            ports=container_ports if container_ports else None,
+            env=env if env else None,
+            resources=resources
+        )
+
+        template = client.V1PodTemplateSpec(
+            metadata=client.V1ObjectMeta(labels={"app": name}),
+            spec=client.V1PodSpec(containers=[container])
+        )
+        
+        deployment_spec = client.V1DeploymentSpec(
+            replicas=replicas,
+            selector=client.V1LabelSelector(match_labels={"app": name}),
+            template=template
+        )
+        
+        deployment = client.V1Deployment(
+            api_version="apps/v1",
+            kind="Deployment",
+            metadata=client.V1ObjectMeta(name=f"{name}-deployment"),
+            spec=deployment_spec
+        )
+
+        # boom wow a deployment
+        try:
+            apps_v1.create_namespaced_deployment(namespace=namespace, body=deployment)
+        except ApiException as e:
+            return HttpResponse(f"error creating deployment: {str(e)}", status=503)
+
+        # if we have service ports, create a service
+        if service_ports:
+            service_spec = client.V1ServiceSpec(
+                selector={"app": name},
+                ports=service_ports,
+                type="LoadBalancer" if expose_externally else "ClusterIP"
+            )
+
+            service = client.V1Service(
+                api_version="v1",
+                kind="Service",
+                metadata=client.V1ObjectMeta(name=f"{name}-service"),
+                spec=service_spec
+            )
+
+            try:
+                core_v1.create_namespaced_service(namespace=namespace, body=service)
+            except ApiException as e:
+                return HttpResponse(f"error creating service: {str(e)}", status=503) # imagine getting this far just to have the service creation fail
+
+    return render(request, 'pod_deploy.html')
 
 # util funcs
 def format_bytes(bytes):
