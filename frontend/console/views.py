@@ -544,7 +544,7 @@ def pod_deploy(request):
 
         replicas = int(request.POST.get('replicas', 1))
         namespace = request.POST.get('namespace', 'default')
-        env_vars = request.POST.get('env_vars') # format: k1=v1,k2=v2
+        env_vars_raw = request.POST.get('env_vars') # format: k1=v1,k2=v2
 
         # we have to create a service alongside the deployment if there's any ports to expose
         expose_externally = request.POST.get('expose_externally') == 'true'
