@@ -548,7 +548,7 @@ def pod_deploy(request):
 
         # we have to create a service alongside the deployment if there's any ports to expose
         expose_externally = request.POST.get('expose_externally') == 'true'
-        ports = request.POST.get('ports') # map of containerPort:hostPort or containerPort:0 if not to be exposed but should still be marked to kube
+        ports_raw = request.POST.get('ports') # map of containerPort:hostPort or containerPort:0 if not to be exposed but should still be marked to kube
 
         env = []
         if env_vars_raw: # i probably don't need to check this but just in case
