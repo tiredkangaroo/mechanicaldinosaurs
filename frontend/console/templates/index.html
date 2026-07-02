@@ -7,33 +7,42 @@
     {% load static %}
     <link rel="stylesheet" href="{% static 'root.css' %}" />
     <style>
-      .machines, .vms, .pods {
+      .machines,
+      .vms,
+      .deployments {
         background-color: #f7e9c1;
         padding: 20px;
       }
-      .machines-title, .vms-title, .pods-title {
+      .machines-title,
+      .vms-title,
+      .deployments-title {
         display: flex;
         flex-direction: row;
         justify-content: space-between;
         align-items: center;
       }
-      #add-machine-button, #add-vm-button, #add-pod-button {
+      #add-machine-button,
+      #add-vm-button,
+      #add-deployment-button {
         font-size: 150%;
         padding-left: 0.9rem;
         padding-right: 0.9rem;
       }
-      #add-machine-dialog, #add-vm-dialog {
+      #add-machine-dialog,
+      #add-vm-dialog {
         width: 45%;
         text-align: right;
         padding-bottom: 2rem;
       }
-      #add-machine-dialog-close, #add-vm-dialog-close {
+      #add-machine-dialog-close,
+      #add-vm-dialog-close {
         padding-left: 0.7rem;
         padding-right: 0.7rem;
         padding-top: 0.4rem;
         padding-bottom: 0.4rem;
       }
-      #add-machine-dialog-content, #add-vm-dialog-content {
+      #add-machine-dialog-content,
+      #add-vm-dialog-content {
         display: flex;
         flex-direction: column;
         text-align: center;
@@ -55,14 +64,18 @@
         font-size: 16px;
         cursor: pointer;
       }
-      .machine-list, .vm-list, .pod-list {
+      .machine-list,
+      .vm-list,
+      .deployment-list {
         list-style-type: none;
         padding: 0;
         display: flex;
         flex-direction: column;
         gap: 10px;
       }
-      .machine-list-item, .vm-list-item, .pod-list-item {
+      .machine-list-item,
+      .vm-list-item,
+      .deployment-list-item {
         background-color: #f0f0f0;
         padding: 10px;
         display: flex;
@@ -75,23 +88,28 @@
     </style>
   </head>
   <body>
-    <div style="display: flex; flex-direction: row; align-items: center; justify-content: space-between; padding: 20px;">
+    <div style="display: flex; flex-direction: row; align-items: center; justify-content: space-between; padding: 20px">
       <h1>mechanical dinosaurs 🦕</h1>
-      <div style="display: flex; flex-direction: column; justify-content: center; align-items: end; gap: 10px;">
+      <div style="display: flex; flex-direction: column; justify-content: center; align-items: end; gap: 10px">
         <a href="{% url 'passkeys_mgmt' %}">
           <button>
-            <img src="{% static 'passkeys/imgs/FIDO-Passkey_Icon-White.png' %}" alt="passkey icon" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 5px;" />
+            <img
+              src="{% static 'passkeys/imgs/FIDO-Passkey_Icon-White.png' %}"
+              alt="passkey icon"
+              style="width: 20px; height: 20px; vertical-align: middle; margin-right: 5px"
+            />
             manage passkeys
           </button>
         </a>
         <a href="{% url 'notifications' %}">
           <button>🔔 notifications ({{ num_notifications_unread }})</button>
         </a>
-        <a href="{% url 'logout' %}" style="text-decoration: none; color: inherit; margin: 0;">
-          <button style="background-color: red;">logout</button>
+        <a href="{% url 'logout' %}" style="text-decoration: none; color: inherit; margin: 0">
+          <button style="background-color: red">logout</button>
         </a>
       </div>
     </div>
+
     <dialog popover id="add-machine-dialog">
       <button id="add-machine-dialog-close" popovertarget="add-machine-dialog" popovertargetaction="close">X</button>
       <div id="add-machine-dialog-content">
@@ -110,29 +128,28 @@
       <button id="add-vm-dialog-close" popovertarget="add-vm-dialog" popovertargetaction="close">X</button>
       <div id="add-vm-dialog-content">
         <h1>choose a machine for the VM</h1>
-        <select id="machine-select" name="machine" onchange="window.location.href=this.value">
+        <select id="machine-select" name="machine" onchange="window.location.href = this.value">
           <option value="" disabled selected>Select a machine</option>
           {% for machine in machines %}
-            <option value="{% url 'create_vm' machine.name %}">{{ machine.name }} ({{ machine.hostport }})</option>
+          <option value="{% url 'create_vm' machine.name %}">{{ machine.name }} ({{ machine.hostport }})</option>
           {% endfor %}
         </select>
       </div>
     </dialog>
 
-    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+    <div style="display: flex; flex-direction: column; gap: 1.5rem">
       <div class="machines">
         <div class="machines-title">
           <h1>your machines</h1>
           <button id="add-machine-button" popovertarget="add-machine-dialog">+</button>
         </div>
-        
+
         <ul class="machine-list">
           {% for machine in machines %}
           <a href="{% url 'machine_detail' machine.name %}" style="text-decoration: none; color: inherit">
             <li class="machine-list-item">
               <div><b>{{ machine.name }}</b> ({{ machine.hostport }})</div>
               <div>
-                <!-- apparently the django way of doing it is this... html forms don't even support DELETE -->
                 <form action="/machine/{{ machine.name }}/delete/" method="post" style="margin: 0">
                   {% csrf_token %}
                   <button type="submit">delete</button>
@@ -145,7 +162,7 @@
           {% endfor %}
         </ul>
       </div>
-      
+
       <div class="vms">
         <div class="vms-title">
           <h1>your vms</h1>
@@ -155,41 +172,50 @@
           {% for vm in vms %}
           <a href="{% url 'vm_detail' vm.machine.name vm.config.name %}" style="text-decoration: none; color: inherit">
             <li class="vm-list-item">
-                <div><b>{{ vm.config.name }}</b> on {{ vm.machine.name }}</div>                
-                <div style="display: flex; justify-content: center; align-items: center; gap: 6px;">
-                  <div class="status-indicator status-{{ vm.status }}"></div>
-                  {{ vm.status }}
-                </div>
+              <div><b>{{ vm.config.name }}</b> on {{ vm.machine.name }}</div>
+              <div style="display: flex; justify-content: center; align-items: center; gap: 6px">
+                <div class="status-indicator status-{{ vm.status }}"></div>
+                {{ vm.status }}
+              </div>
             </li>
           </a>
           {% empty %}
           <p style="margin: 0">No VMs found.</p>
           {% endfor %}
-        </div>
+        </ul>
+      </div>
 
-        <div class="pods">
-        <div class="pods-title">
-          <h1>your pods</h1>
-          <a href="{% url 'pod_deploy' %}">
-            <button id="add-pod-button">+</button>
+      <div class="deployments">
+        <div class="deployments-title">
+          <h1>your deployments</h1>
+          <a href="{% url 'deploy' %}">
+            <button id="add-deployment-button">+</button>
           </a>
         </div>
-        <ul class="pod-list">
-          {% for pod in pods %}
-          <a href="{% url 'pod_detail' pod.namespace pod.name %}" style="text-decoration: none; color: inherit">
-            <li class="pod-list-item">
-              <div><b style="font-family: 'Merriweather';">{{ pod.name }}</b></div>
-              <div style="display: flex; justify-content: center; align-items: center; gap: 6px;">
-              <div class="status-indicator status-{{ pod.status }}"></div>
-              {{ pod.status }}
+        <ul class="deployment-list">
+          {% for deployment in deployments %}
+          <a
+            href="{% url 'deployment_detail' deployment.namespace deployment.name %}"
+            style="text-decoration: none; color: inherit"
+          >
+            <li class="deployment-list-item">
+              <div>
+                <b style="font-family: &quot;Merriweather&quot;">{{ deployment.name }}</b>
+                <span style="font-size: 85%; color: #555; margin-left: 8px">{{ deployment.namespace }}</span>
+              </div>
+              <div style="display: flex; justify-content: center; align-items: center; gap: 6px">
+                <div class="status-indicator status-{{ deployment.status|lower }}"></div>
+                {{ deployment.status }}
               </div>
             </li>
           </a>
           {% empty %}
-          <p style="margin: 0">No pods found.</p>
+          <p style="margin: 0">No deployments found.</p>
           {% endfor %}
         </ul>
       </div>
+    </div>
+
     <script>
       function toggleAddMachineDialog() {
         const dialog = document.getElementById("add-machine-dialog");

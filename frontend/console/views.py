@@ -11,7 +11,9 @@ from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 from django.conf import settings
 import resend
+from django.views.decorators.clickjacking import xframe_options_exempt
 
+# note: organize imports
 # note: this file needs to be broken up
 
 # note: make these configurable
@@ -43,24 +45,46 @@ def index(request):
                         vms.append(vm)
             except Exception as e:
                 print(f"error fetching vms for machine {machine.name}: {str(e)}")
+    
+    deployments = []
     try:
-        pods_list = kube_core_api.list_pod_for_all_namespaces(watch=False)
-        for pod in pods_list.items:
-            pods.append({
-                "name": pod.metadata.name,
-                "namespace": pod.metadata.namespace,
-                "status": pod.status.phase,
-                "ip": pod.status.pod_ip,
-                "created_at": pod.metadata.creation_timestamp,
+        deployments_list = kube_app_api.list_deployment_for_all_namespaces(watch=False)
+        
+        for deploy in deployments_list.items:
+            # get desired and ready replicas (wow kaboom kablow)
+            desired_replicas = deploy.spec.replicas or 0
+            ready_replicas = deploy.status.ready_replicas or 0
+            
+            # friendly status string based on replica matching
+            # wow can i be friends with you, mr. friendly status string?
+            # i want new friends but they don't want me (the strokes)
+            if ready_replicas == desired_replicas:
+                if ready_replicas == 0:
+                    status = "Done"
+                else:   
+                    status = "Healthy"
+            elif ready_replicas == 0: # oop
+                status = "Critical"
+            else:
+                status = "Scaling"
+
+            deployments.append({
+                "name": deploy.metadata.name,
+                "namespace": deploy.metadata.namespace,
+                "replicas_desired": desired_replicas,
+                "replicas_ready": ready_replicas,
+                "status": status,
+                "image": deploy.spec.template.spec.containers[0].image if deploy.spec.template.spec.containers else "Unknown",
+                "created_at": deploy.metadata.creation_timestamp,
             })
     except ApiException as e:
-        print(f"error fetching pods from k3s cluster: {str(e)}")
-    
-    # sort pods by status and then by created_at
-    pods.sort(key=lambda x: (x['status'], x['created_at'])) # wow thats cool how easy ts was
+        print(f"error fetching deployments from cluster: {str(e)}")
+
+    # sort by namespace and then by status (crititcal > scaling > healthy) and then by created at
+    deployments.sort(key=lambda x: (x['namespace'], x['status'], x['created_at']))
     
     notifications_unread = Notification.objects.filter(read=False)
-    return render(request, 'index.html', {'machines': machines, 'vms': vms, 'num_notifications_unread': len(notifications_unread), 'pods': pods})
+    return render(request, 'index.html', {'machines': machines, 'vms': vms, 'num_notifications_unread': len(notifications_unread), 'deployments': deployments})
 
 def login_view(request):
     if request.method == 'POST':
@@ -531,7 +555,7 @@ def pod_detail(request, namespace, pod_name):
 
     return render(request, 'pod_detail.html', {'pod': pod_info})
 
-def pod_deploy(request):
+def deploy(request):
     if request.method == 'POST':
         name = request.POST.get('name').lower().strip()
         image = request.POST.get('image')
@@ -639,7 +663,117 @@ def pod_deploy(request):
             except ApiException as e:
                 return HttpResponse(f"error creating service: {str(e)}", status=503) # imagine getting this far just to have the service creation fail
 
-    return render(request, 'pod_deploy.html')
+    return render(request, 'deploy.html')
+
+@login_required
+def deployment_detail(request, namespace, deployment_name):
+    try:
+        # get the deployment
+        deployment = kube_app_api.read_namespaced_deployment(name=deployment_name, namespace=namespace)
+        
+        # get the metadata stuff (like we did up in index)
+        desired_replicas = deployment.spec.replicas or 0
+        ready_replicas = deployment.status.ready_replicas or 0
+        updated_replicas = deployment.status.updated_replicas or 0
+        available_replicas = deployment.status.available_replicas or 0
+        
+        deploy_data = {
+            "name": deployment.metadata.name,
+            "namespace": deployment.metadata.namespace,
+            "strategy": deployment.spec.strategy.type if deployment.spec.strategy else "RollingUpdate",
+            "replicas_desired": desired_replicas,
+            "replicas_ready": ready_replicas,
+            "replicas_updated": updated_replicas,
+            "replicas_available": available_replicas,
+            "labels": deployment.metadata.labels or {},
+            "created_at": deployment.metadata.creation_timestamp,
+        }
+
+        # get containers (this is where we can pull out env vars, resource requests/limits, etc.)
+        containers = []
+        if deployment.spec.template.spec.containers:
+            for c in deployment.spec.template.spec.containers:
+                # env stuff
+                env_map = {}
+                if c.env:
+                    for env_var in c.env:
+                        if env_var.value is not None:
+                            env_map[env_var.name] = env_var.value
+                        elif env_var.value_from:
+                            env_map[env_var.name] = "[Value From Source]"
+
+                # limits / requests
+                reqs = getattr(c.resources, 'requests', {}) or {}
+                limits = getattr(c.resources, 'limits', {}) or {}
+
+                containers.append({
+                    "name": c.name,
+                    "image": c.image,
+                    "ports": [p.container_port for p in c.ports] if c.ports else [],
+                    "env": env_map,
+                    "resources": {
+                        "requests": reqs,
+                        "limits": limits
+                    }
+                })
+        
+        # pull the service if it exists
+        service = None
+        try:
+            service = kube_core_api.read_namespaced_service(name=f"{deployment_name.split('-')[0]}-service", namespace=namespace)
+            service_ports = [{"name": p.name, "port": p.port, "target_port": p.target_port} for p in service.spec.ports] if service and service.spec else []
+        except ApiException as e:
+            print("error fetching service for deployment: " + str(e))
+            service_ports = []
+
+        # match deployments to their underlying runtime replicas
+        # probably not a great way to do it bc u naming stuff could be messed up
+        selector_labels = deployment.spec.selector.match_labels
+        pod_list_ctx = []
+        
+        if selector_labels:
+            # Convert label dict to standard comma-separated selector string (e.g. "app=my-app")
+            selector_str = ",".join([f"{k}={v}" for k, v in selector_labels.items()])
+            
+            # kube_core_api should be an instance of client.CoreV1Api()
+            managed_pods = kube_core_api.list_namespaced_pod(namespace=namespace, label_selector=selector_str)
+            
+            for pod in managed_pods.items:
+                pod_list_ctx.append({
+                    "name": pod.metadata.name,
+                    "status": pod.status.phase,
+                    "ip": pod.status.pod_ip,
+                    "node": pod.spec.node_name,
+                    "restarts": sum([c.restart_count for c in pod.status.container_statuses]) if pod.status.container_statuses else 0,
+                    "created_at": pod.metadata.creation_timestamp
+                })
+
+        context = {
+            "deployment": deploy_data,
+            "containers": containers,
+            "service_ports": service_ports,
+            "pods": pod_list_ctx
+        }
+        
+        return render(request, 'deployment_detail.html', context)
+    except ApiException as e:
+        return HttpResponse(f"error fetching deployment details: {str(e)}", status=503)
+
+@xframe_options_exempt
+def pod_logs(request, namespace, pod_name):
+    def log_generator():
+        log_stream = kube_core_api.read_namespaced_pod_log(
+            name=pod_name,
+            namespace=namespace,
+            follow=True,                # keep conn open
+            tail_lines=100,             # pre-populate with the last 100 log item (possibly have this configure?)
+            _preload_content=False
+        )
+
+        for chunk in log_stream.stream(amt=1024):
+            yield chunk
+
+    return StreamingHttpResponse(log_generator(), content_type="text/plain")
 
 # util funcs
 def format_bytes(bytes):
