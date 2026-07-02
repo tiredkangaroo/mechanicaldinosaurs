@@ -78,5 +78,4 @@ def index(request):
     # sort by namespace and then by status (crititcal > scaling > healthy) and then by created at
     deployments.sort(key=lambda x: (x['namespace'], x['status'], x['created_at']))
     
-    notifications_unread = Notification.objects.filter(read=False)
-    return render(request, 'index.html', {'machines': machines, 'vms': vms, 'num_notifications_unread': len(notifications_unread), 'deployments': deployments})
+    return render(request, 'index.html', {'machines': machines, 'vms': vms, 'deployments': deployments})

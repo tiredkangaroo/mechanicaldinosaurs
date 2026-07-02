@@ -101,9 +101,6 @@
             manage passkeys
           </button>
         </a>
-        <a href="{% url 'notifications' %}">
-          <button>🔔 notifications ({{ num_notifications_unread }})</button>
-        </a>
         <a href="{% url 'logout' %}" style="text-decoration: none; color: inherit; margin: 0">
           <button style="background-color: red">logout</button>
         </a>
@@ -132,7 +129,7 @@
           </a>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px">
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-top: 10px">
           {% for machine in machines %}
           <a href="{% url 'machine_detail' machine.name %}" style="text-decoration: none; color: inherit">
             <div
@@ -170,7 +167,7 @@
           <h1>your vms</h1>
           <button id="add-vm-button" popovertarget="add-vm-dialog">+</button>
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px">
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-top: 10px">
           {% for vm in vms %}
           <a href="{% url 'vm_detail' vm.machine.name vm.config.name %}" style="text-decoration: none; color: inherit">
             <div
@@ -204,7 +201,7 @@
             <button id="add-deployment-button">+</button>
           </a>
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px">
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-top: 10px">
           {% for deployment in deployments %}
           <a
             href="{% url 'deployment_detail' deployment.namespace deployment.name %}"

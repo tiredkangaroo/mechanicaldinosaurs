@@ -36,6 +36,16 @@ func serve() {
 		return c.JSON(200, automations) // the automation struct has a marshal json function to make it communicable
 	})
 
+	api.GET("/automations/:id", func(c echo.Context) error {
+		id := c.Param("id")
+		for _, a := range automations {
+			if a.ID == id {
+				return c.JSON(200, a) // the automation struct has a marshal json function to make it communicable
+			}
+		}
+		return c.JSON(404, map[string]string{"error": "automation not found"})
+	})
+
 	// add new automation
 	api.POST("/automations", func(c echo.Context) error {
 		var newAutomation Automation // there's an unmarshal json that handles this stuff, the actual json that should be given should be the communicable automation
@@ -52,7 +62,7 @@ func serve() {
 		automations = append(automations, &newAutomation)
 		slog.Info("new automation added", "automation_id", newAutomation.ID)
 		saveAutomations() // save automations to file after adding new automation
-		return c.JSON(200, map[string]string{"status": "ok"})
+		return c.JSON(201, map[string]string{"status": "ok"})
 	})
 
 	// delete automation
@@ -152,7 +162,7 @@ func serve() {
 		}
 	}()
 
-	if err := srv.Start(":"); err != nil {
+	if err := srv.Start(":" + AUTOMATION_ENGINE_PORT); err != nil {
 		slog.Error("server error", "error", err)
 		cancel <- struct{}{} // wait for the data refresh goroutine to finish
 	}

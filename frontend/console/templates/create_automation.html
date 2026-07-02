@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'root.css' %}" />
+    <title>create an automation</title>
+    <style>
+      form {
+        max-width: 600px;
+        margin: 50px auto;
+        padding: 20px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        background-color: #f9f9f9;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      fieldset {
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      legend {
+        font-family: "Playfair Display", serif;
+        font-weight: 700;
+        padding: 0 6px;
+      }
+      .field-row {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .field-row label {
+        min-width: 120px;
+      }
+      .field-row input[type="text"],
+      .field-row input[type="number"],
+      .field-row input[type="datetime-local"],
+      .field-row select,
+      .field-row textarea {
+        flex: 1;
+        min-width: 180px;
+        padding: 6px 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-family: inherit;
+      }
+      .field-row textarea {
+        resize: vertical;
+        min-height: 70px;
+      }
+      .sub-fields {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-left: 2px;
+      }
+      .hidden {
+        display: none !important;
+      }
+      .checkbox-row {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+      }
+      .checkbox-row input {
+        width: auto;
+      }
+      #condition_operator {
+        width: 1px;
+      }
+      #condition_variable_name_selection optgroup {
+        font-style: normal;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 style="text-align: center">create an automation</h1>
+
+    <form method="POST" action="{% url 'create_automation' %}" id="automation-form">
+      {% csrf_token %}
+
+      <h2 style="margin-bottom: 0">Trigger</h2>
+      <div class="field-row">
+        <label for="trigger_type">Type:</label>
+        <select id="trigger_type" name="trigger_type" required onchange="updateTriggerFields()">
+          <option value="time">time</option>
+          <option value="interval">interval</option>
+          <option value="machines info refresh">machines info refresh</option>
+        </select>
+      </div>
+
+      <div id="trigger_time_fields">
+        <div class="field-row">
+          <label for="trigger_time_picker">Run At:</label>
+          <input type="datetime-local" id="trigger_time_picker" oninput="syncTriggerTime()" />
+        </div>
+        <input type="hidden" id="trigger_time" name="trigger_time" />
+      </div>
+
+      <div class="sub-fields hidden" id="trigger_interval_fields">
+        <div class="field-row">
+          <label for="trigger_interval">Every (seconds):</label>
+          <input type="number" id="trigger_interval" name="trigger_interval" min="1" step="1" value="60" />
+        </div>
+      </div>
+
+      <div class="sub-fields hidden" id="trigger_machines_fields">
+        <!-- subfield for trigger machines. there aren't any rn and i don't want to add a message saying that there aren't any -->
+      </div>
+
+      <h2 style="margin-bottom: 0">Condition</h2>
+
+      <div class="field-row">
+        <select
+          id="condition_variable_name_selection"
+          name="condition_variable_name"
+          onchange="updateConditionValueField()"
+        >
+          <option value="time">time</option>
+        </select>
+        <select id="condition_operator" name="condition_operator" required>
+          <option value="equals">==</option>
+          <option value="greater than">&gt;</option>
+          <option value="less than">&lt;</option>
+          <option value="greater than or equal">&gt;=</option>
+          <option value="less than or equal">&lt;=</option>
+          <option value="contains">contains</option>
+          <option value="starts with">starts with</option>
+          <option value="ends with">ends with</option>
+          <option value="regex match">regex match</option>
+        </select>
+        <input type="text" step="any" id="condition_value_number" name="condition_value" />
+      </div>
+
+      <input type="hidden" id="condition_value_type" name="condition_value_type" value="number" />
+
+      <div class="checkbox-row">
+        <input type="checkbox" id="condition_negate" name="condition_negate" />
+        <label for="condition_negate" style="min-width: unset">Negate condition (NOT)</label>
+      </div>
+
+      <div class="field-row hidden" id="condition_value_boolean_row">
+        <label for="condition_value_boolean">Value:</label>
+        <select id="condition_value_boolean" name="condition_value_boolean_placeholder">
+          <option value="true">true</option>
+          <option value="false">false</option>
+        </select>
+      </div>
+
+      <h2 style="margin-bottom: 0">Action</h2>
+
+      <div class="field-row">
+        <label for="action_type">Action Type:</label>
+        <select id="action_type" name="action_type" required onchange="updateActionFields()">
+          <option value="email">email</option>
+        </select>
+      </div>
+
+      <div class="sub-fields" id="action_email_fields">
+        <div class="field-row">
+          <label for="action_email_to">Send To:</label>
+          <input type="text" id="action_email_to" name="action_email_to" placeholder="someone@example.com" required />
+        </div>
+        <div class="field-row">
+          <label for="action_email_subject">Subject:</label>
+          <input type="text" id="action_email_subject" name="action_email_subject" required />
+        </div>
+        <div class="field-row">
+          <label for="action_email_body">Body:</label>
+          <textarea id="action_email_body" name="action_email_body" required></textarea>
+        </div>
+      </div>
+
+      <div style="text-align: center">
+        <button type="submit">Create Automation</button>
+      </div>
+    </form>
+
+    <script>
+        const machineNames = {{ machine_names }};
+
+      // fields available on the machines info refresh trigger, mirroring the
+      // json tags on the machine info struct, along with their value type.
+      const machineInfoFields = [
+        { key: "os", type: "string" },
+        { key: "os_release", type: "string" },
+        { key: "hostname", type: "string" },
+        { key: "uptime", type: "number" },
+        { key: "cpu", type: "string" },
+        { key: "arch", type: "string" },
+        { key: "cpu_num", type: "number" },
+        { key: "cpu_usage", type: "number" },
+        { key: "cpu_temp", type: "number" },
+        { key: "memory", type: "number" },
+        { key: "memory_used", type: "number" },
+        { key: "storage_capacity", type: "number" },
+        { key: "storage_used", type: "number" },
+        { key: "has_battery", type: "boolean" },
+        { key: "battery", type: "string" },
+      ];
+
+      // variables available for the non-machine triggers.
+      const triggerVariables = {
+        time: [{ key: "time", type: "number" }],
+        interval: [
+          { key: "interval", type: "number" },
+          { key: "count", type: "number" },
+        ],
+      };
+
+      function updateTriggerFields() {
+        const type = document.getElementById("trigger_type").value;
+        document.getElementById("trigger_time_fields").classList.toggle("hidden", type !== "time");
+        document.getElementById("trigger_interval_fields").classList.toggle("hidden", type !== "interval");
+        document.getElementById("trigger_machines_fields").classList.toggle("hidden", type !== "machines info refresh");
+
+        // required toggling so hidden fields don't block submission
+        document.getElementById("trigger_time_picker").required = type === "time";
+        document.getElementById("trigger_interval").required = type === "interval";
+
+        updateVariableOptions(type);
+      }
+
+      function updateVariableOptions(triggerType) {
+        const select = document.getElementById("condition_variable_name_selection");
+        select.innerHTML = "";
+
+        if (triggerType === "machines info refresh") {
+          if (machineNames.length === 0) {
+            const opt = document.createElement("option");
+            opt.disabled = true;
+            opt.textContent = "no machines available";
+            select.appendChild(opt);
+          }
+          machineNames.forEach((machine) => {
+            const header = document.createElement("option");
+            header.disabled = true;
+            header.textContent = `── ${machine} ──`;
+            select.appendChild(header);
+
+            machineInfoFields.forEach((field) => {
+              const opt = document.createElement("option");
+              opt.value = `machines_info.${machine}.${field.key}`;
+              opt.textContent = `    ${machine}.${field.key}`;
+              opt.dataset.type = field.type;
+              select.appendChild(opt);
+            });
+          });
+        } else {
+          (triggerVariables[triggerType] || []).forEach((variable) => {
+            const opt = document.createElement("option");
+            opt.value = variable.key;
+            opt.textContent = variable.key;
+            opt.dataset.type = variable.type;
+            select.appendChild(opt);
+          });
+        }
+
+        updateConditionValueField();
+      }
+
+      function updateConditionValueField() {
+        const select = document.getElementById("condition_variable_name_selection");
+        const selectedOption = select.options[select.selectedIndex];
+        const valueType = (selectedOption && selectedOption.dataset.type) || "string";
+
+        document.getElementById("condition_value_type").value = valueType;
+
+        const numberInput = document.getElementById("condition_value_number");
+        const booleanRow = document.getElementById("condition_value_boolean_row");
+        const booleanSelect = document.getElementById("condition_value_boolean");
+
+        if (valueType === "boolean") {
+          numberInput.classList.add("hidden");
+          numberInput.disabled = true;
+          numberInput.name = "condition_value_number_placeholder";
+          booleanRow.classList.remove("hidden");
+          booleanSelect.disabled = false;
+          booleanSelect.name = "condition_value";
+        } else {
+          numberInput.classList.remove("hidden");
+          numberInput.disabled = false;
+          numberInput.name = "condition_value";
+          numberInput.type = valueType === "number" ? "number" : "text";
+          booleanRow.classList.add("hidden");
+          booleanSelect.disabled = true;
+          booleanSelect.name = "condition_value_boolean_placeholder";
+        }
+      }
+
+      function syncTriggerTime() {
+        const picker = document.getElementById("trigger_time_picker");
+        const hidden = document.getElementById("trigger_time");
+        if (picker.value) {
+          hidden.value = Math.floor(new Date(picker.value).getTime() / 1000);
+        } else {
+          hidden.value = "";
+        }
+      }
+
+      function updateActionFields() {
+        const type = document.getElementById("action_type").value;
+        document.getElementById("action_email_fields").classList.toggle("hidden", type !== "email");
+      }
+
+      document.getElementById("automation-form").addEventListener("submit", function (e) {
+        syncTriggerTime();
+        const triggerType = document.getElementById("trigger_type").value;
+        if (triggerType === "time" && !document.getElementById("trigger_time").value) {
+          e.preventDefault();
+          alert("Please pick a run time for the trigger.");
+        }
+      });
+
+      // initialize visibility on page load
+      updateTriggerFields();
+      updateActionFields();
+    </script>
+  </body>
+</html>

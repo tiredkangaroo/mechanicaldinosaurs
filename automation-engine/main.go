@@ -16,19 +16,26 @@ func main() {
 
 func loadAutomations() {
 	automations = []*Automation{} // reset automations to empty slice before loading from file
-	data, err := os.ReadFile(AUTOMATIONS_SAVE_PATH)
+	raw_data, err := os.ReadFile(AUTOMATIONS_SAVE_PATH)
 	if err != nil {
 		slog.Error("failed to read automations file", "error", err)
 		return
 	}
-	var automationsCommunicable []*AutomationCommunicable
-	err = json.Unmarshal(data, &automationsCommunicable)
+	var data struct {
+		automationsCommunicable []*AutomationCommunicable
+		machines                []Machine
+	}
+	err = json.Unmarshal(raw_data, &data)
 	if err != nil {
 		slog.Error("failed to unmarshal automations file", "error", err)
 		return
 	}
-	fmt.Println("loaded automations communicated from save file: ", len(automationsCommunicable))
-	for _, ac := range automationsCommunicable {
+	fmt.Println("loaded machines communicated from save file: ", len(data.machines))
+	fmt.Println("loaded automations communicated from save file: ", len(data.automationsCommunicable))
+
+	machines = data.machines
+
+	for _, ac := range data.automationsCommunicable {
 		automation, err := ac.ToAutomation()
 		if err != nil {
 			slog.Error("failed to convert communicated automation to automation", "error", err)
