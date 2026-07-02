@@ -53,3 +53,34 @@ setting up the daemon?
 - if this daemon is the master control plane? install k3s: `curl -sfL https://get.k3s.io | sh -`
 - if the daemon is running on raspi (or if cgroups is disabled for any reason), you have to enable cgroups by adding cgroup_memory=1 cgroup_enable=memory to /boot/firmware/cmdline.txt (https://docs.k3s.io/installation/requirements?os=pi)
 - copy over /etc/rancher/k3s/k3s.yaml to frontend
+
+## current env vars for each app:
+
+### console
+
+AUTOMATION_ENGINE_URL
+AUTOMATION_ENGINE_SECRET
+VM_PROXY_DISCONNECT_HOST
+VM_PROXY_DISCONNECT_PORT
+VM_PROXY_DISCONNECT_SECRET
+
+### daemon
+
+MECHANICAL_DINOSAURS_DATA
+API_SECRET
+PORT
+
+### vm proxy
+
+PORT
+DISCONNECT_PORT
+DISCONNECT_SECRET
+DB_FILE
+
+### automation engine
+
+AUTOMATION_ENGINE_PORT
+AUTOMATION_ENGINE_SECRET
+AUTOMATIONS_SAVE_PATH
+RESEND_API_KEY
+EMAIL_DOMAIN

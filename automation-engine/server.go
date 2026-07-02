@@ -51,6 +51,7 @@ func serve() {
 		}
 		automations = append(automations, &newAutomation)
 		slog.Info("new automation added", "automation_id", newAutomation.ID)
+		saveAutomations() // save automations to file after adding new automation
 		return c.JSON(200, map[string]string{"status": "ok"})
 	})
 
@@ -80,6 +81,7 @@ func serve() {
 		}
 		automations = append(automations[:index], automations[index+1:]...) // remove the automation from the slice
 		slog.Info("automation deleted", "automation_id", automation.ID)
+		saveAutomations() // save automations to file after deleting automation
 		return c.JSON(200, map[string]string{"status": "ok"})
 	})
 
@@ -100,6 +102,7 @@ func serve() {
 			return c.JSON(500, map[string]string{"error": "failed to enable automation: " + err.Error()})
 		}
 		slog.Info("automation enabled", "automation_id", automation.ID)
+		saveAutomations() // save automations to file after enabling automation
 		return c.JSON(200, map[string]string{"status": "ok"})
 	})
 
@@ -120,6 +123,7 @@ func serve() {
 			return c.JSON(500, map[string]string{"error": "failed to disable automation: " + err.Error()})
 		}
 		slog.Info("automation disabled", "automation_id", automation.ID)
+		saveAutomations() // save automations to file after disabling automation
 		return c.JSON(200, map[string]string{"status": "ok"})
 	})
 

@@ -30,7 +30,4 @@ urlpatterns = [
     path('k3/deployments/<str:namespace>/<str:deployment_name>/delete', k3_views.delete_deployment, name='delete_deployment'),
     
     path('k3/pod/<str:namespace>/<str:pod_name>/logs', k3_views.pod_logs, name='pod_logs'),
-
-    path('send-email/', views.send_email, name='send_email'), # should be removed in prod
-    path('notifications/', views.notifications, name='notifications'),
 ]

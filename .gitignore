@@ -1,3 +1,4 @@
 test_data
 *.iso
 .DS_Store
+.env

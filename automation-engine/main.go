@@ -11,6 +11,7 @@ var AUTOMATIONS_SAVE_PATH = os.Getenv("AUTOMATIONS_SAVE_PATH")
 
 func main() {
 	loadAutomations()
+	serve()
 }
 
 func loadAutomations() {
@@ -42,5 +43,18 @@ func loadAutomations() {
 			}
 			automation.Enabled = err == nil // if registration failed, we should mark the automation as disabled
 		}
+	}
+}
+
+func saveAutomations() {
+	data, err := json.MarshalIndent(automations, "", "  ") // again the marshal json function should handle this to make it communicable
+	if err != nil {
+		slog.Error("failed to marshal automations to save file", "error", err)
+		return
+	}
+	err = os.WriteFile(AUTOMATIONS_SAVE_PATH, data, 0644)
+	if err != nil {
+		slog.Error("failed to write automations to save file", "error", err)
+		return
 	}
 }

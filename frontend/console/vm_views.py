@@ -1,6 +1,6 @@
 from django.shortcuts import render, HttpResponse, redirect, reverse
 from django.http import StreamingHttpResponse
-from .models import Machine, VMSession, Notification
+from .models import Machine, VMSession
 import requests, math, uuid, socket
 from dateutil import parser 
 from django.contrib.auth.decorators import login_required
@@ -13,10 +13,9 @@ from django.conf import settings
 import resend
 from django.views.decorators.clickjacking import xframe_options_exempt
 
-# note: make these configurable
-vm_proxy_disconnect_host = "localhost"
-vm_proxy_disconnect_port = 3832  
-vm_proxy_disconnect_secret = "08ba70bc9cb9a486ed0cdc7798e9fb571f75f9e6888d40f07f076679f0781a4ebda8df3a2c6cb2d4bae434cbcbfc3300020214d79c97645daabef348b1bb4c8f"
+vm_proxy_disconnect_host = environ.get("VM_PROXY_DISCONNECT_HOST")
+vm_proxy_disconnect_port = environ.get("VM_PROXY_DISCONNECT_PORT")
+vm_proxy_disconnect_secret = environ.get("VM_PROXY_DISCONNECT_SECRET")
 
 
 @login_required
