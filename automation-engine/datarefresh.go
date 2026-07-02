@@ -1,40 +1,31 @@
 package main
 
-import "sync"
+import (
+	"log/slog"
 
-var dataRefreshAlerts = &Alerts{}
+	"github.com/tiredkangaroo/mechanicaldinosaurs/server"
+)
 
-type Alerts struct {
-	mu        sync.Mutex
-	listeners map[chan struct{}]struct{}
-}
+var machineInfoRefreshAlerts = &Alerts[map[string]*server.Info]{}
+var machines = []Machine{}
 
-func (a *Alerts) Broadcast() {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	for ch := range a.listeners {
-		select {
-		case ch <- struct{}{}:
-		default:
-			// defaults if a specific listener's buffer is full, we will skip bc we don't want block
-			// probably only full if broadcast is called twice and listener hasn't read the first one yet or smth
+func performDataRefresh() {
+	var machineInfos = make(map[string]*server.Info)
+	for _, machine := range machines {
+		info, err := server.Call(server.GetInfoRequest, machine.Hostport, struct{}{}, machine.Secret)
+		if err != nil {
+			slog.Error("get machine info", "machine", machine.Name, "hostport", machine.Hostport, "error", err)
+			machineInfos[machine.Name] = nil
+		} else {
+			machineInfos[machine.Name] = info
 		}
 	}
+	slog.Info("data refresh", "machines_info", machineInfos)
+	machineInfoRefreshAlerts.Broadcast(machineInfos)
 }
 
-func (a *Alerts) subscribe() chan struct{} {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	if a.listeners == nil {
-		a.listeners = make(map[chan struct{}]struct{})
-	}
-	ch := make(chan struct{}, 1)
-	a.listeners[ch] = struct{}{}
-	return ch
-}
-
-func (a *Alerts) unsubscribe(ch chan struct{}) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	delete(a.listeners, ch)
+type Machine struct {
+	Name     string `json:"name"`
+	Hostport string `json:"hostport"` // hostport for the daemon
+	Secret   string `json:"secret"`
 }

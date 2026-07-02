@@ -4,17 +4,20 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/tiredkangaroo/mechanicaldinosaurs/server"
 )
 
 type Trigger interface {
-	Type() string
-	Register(cb func()) error
-	Deregister() error
+	Type() string                    // "time", "interval", "machines info refresh"
+	Name() string                    // on event: <name>, this is an explainer, not a unique identifier
+	Register(cb func(Context)) error // cb will just be a function that calls condition.Evaluate from the overlying automation, and then calls action.Do() if the condition is true
+	Deregister() error               // when an automation is removed, this should be called to stop the trigger from firing
 }
 
 // time trigger
 type TimeTrigger struct {
-	t         time.Time
+	Time      time.Time `json:"time"`
 	c         chan struct{}
 	closeOnce sync.Once
 }
@@ -22,17 +25,24 @@ type TimeTrigger struct {
 func (t *TimeTrigger) Type() string {
 	return "time"
 }
-func (t *TimeTrigger) Register(cb func()) error {
-	until := time.Until(t.t)
+func (t *TimeTrigger) Name() string {
+	return "time is " + t.Time.String()
+}
+func (t *TimeTrigger) Register(cb func(Context)) error {
+	until := time.Until(t.Time)
 	if until <= 0 {
-		return fmt.Errorf("time trigger: time %v is in the past", t.t)
+		return fmt.Errorf("time trigger: time %v is in the past", t.Time)
 	}
 	go func() {
 		timer := time.NewTimer(until)
 		defer timer.Stop()
 		select {
 		case <-timer.C:
-			cb()
+			cb(Context{
+				Data: map[string]any{
+					"time": t.Time.Unix(),
+				},
+			})
 		case <-t.c:
 			return
 		}
@@ -46,9 +56,16 @@ func (t *TimeTrigger) Deregister() error {
 	return nil
 }
 
+func NewTimeTrigger(t time.Time) *TimeTrigger {
+	return &TimeTrigger{
+		Time: t,
+		c:    make(chan struct{}),
+	}
+}
+
 // interval trigger
 type IntervalTrigger struct {
-	d         time.Duration
+	Every     time.Duration `json:"every"`
 	c         chan struct{}
 	closeOnce sync.Once
 }
@@ -56,14 +73,24 @@ type IntervalTrigger struct {
 func (i *IntervalTrigger) Type() string {
 	return "interval"
 }
-func (i *IntervalTrigger) Register(cb func()) error {
+func (i *IntervalTrigger) Name() string {
+	return "every " + i.Every.String()
+}
+func (i *IntervalTrigger) Register(cb func(Context)) error {
 	go func() {
-		ticker := time.NewTicker(i.d)
+		ticker := time.NewTicker(i.Every)
 		defer ticker.Stop()
+		count := 0
 		for {
 			select {
 			case <-ticker.C:
-				cb()
+				cb(Context{
+					Data: map[string]any{
+						"interval": i.Every.Seconds(),
+						"count":    count,
+					},
+				})
+				count++
 			case <-i.c:
 				return
 			}
@@ -78,36 +105,37 @@ func (i *IntervalTrigger) Deregister() error {
 	return nil
 }
 
-func NewTimeTrigger(t time.Time) *TimeTrigger {
-	return &TimeTrigger{
-		t: t,
-		c: make(chan struct{}),
-	}
-}
-
 func NewIntervalTrigger(d time.Duration) *IntervalTrigger {
 	return &IntervalTrigger{
-		d: d,
-		c: make(chan struct{}),
+		Every: d,
+		c:     make(chan struct{}),
 	}
 }
 
 // data about machines just got refreshed
-type DataRefreshTrigger struct {
-	subscription chan struct{}
+type MachineInfoRefreshTrigger struct {
+	subscription chan map[string]*server.Info
 	c            chan struct{}
 	closeOnce    sync.Once
 }
 
-func (d *DataRefreshTrigger) Type() string {
-	return "data_refresh"
+func (d *MachineInfoRefreshTrigger) Type() string {
+	return "machines info refresh"
 }
-func (d *DataRefreshTrigger) Register(cb func()) error {
+func (d *MachineInfoRefreshTrigger) Name() string {
+	return "machines info refresh"
+}
+func (d *MachineInfoRefreshTrigger) Register(cb func(Context)) error {
 	go func() {
+		d.subscription = machineInfoRefreshAlerts.subscribe()
 		for {
 			select {
-			case <-d.subscription:
-				cb()
+			case machinesInfo := <-d.subscription:
+				cb(Context{
+					Data: map[string]any{
+						"machines_info": machinesInfo,
+					},
+				})
 			case <-d.c:
 				return
 			}
@@ -115,17 +143,23 @@ func (d *DataRefreshTrigger) Register(cb func()) error {
 	}()
 	return nil
 }
-func (d *DataRefreshTrigger) Deregister() error {
+func (d *MachineInfoRefreshTrigger) Deregister() error {
 	d.closeOnce.Do(func() {
 		close(d.c)
-		dataRefreshAlerts.unsubscribe(d.subscription)
+		machineInfoRefreshAlerts.unsubscribe(d.subscription)
 	})
 	return nil
 }
 
-func NewDataRefreshTrigger() *DataRefreshTrigger {
-	return &DataRefreshTrigger{
+func NewMachineInfoRefreshTrigger() *MachineInfoRefreshTrigger {
+	return &MachineInfoRefreshTrigger{
 		c:            make(chan struct{}),
-		subscription: dataRefreshAlerts.subscribe(),
+		subscription: nil, // not subscribed yet, will be subscribed in Register() so we don't register with a shit ton of old machine refreshes
 	}
+}
+
+type TriggerCommunicable struct {
+	Type  string  `json:"type"`            // "time", "interval", "machines info refresh"
+	Time  int64   `json:"time,omitempty"`  // exists for time trigger
+	Every float64 `json:"every,omitempty"` // exists for interval trigger
 }

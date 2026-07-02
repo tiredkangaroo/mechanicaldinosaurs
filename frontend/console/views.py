@@ -10,12 +10,9 @@ from os import environ, path
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 from django.conf import settings
-import resend
 from django.views.decorators.clickjacking import xframe_options_exempt
 from . import k3
 # note: organize imports
-
-resend.api_key = environ.get("RESEND_API_KEY")
 
 # Create your views here.
 
@@ -83,27 +80,3 @@ def index(request):
     
     notifications_unread = Notification.objects.filter(read=False)
     return render(request, 'index.html', {'machines': machines, 'vms': vms, 'num_notifications_unread': len(notifications_unread), 'deployments': deployments})
-
-# test view; not to be used in prod
-@login_required
-def send_email(request):
-    if request.method == 'POST':
-        subject = request.POST.get('subject')
-        message = request.POST.get('message')
-        recipient = request.POST.get('recipient')
-        try:
-            resend.Emails.send(resend.Emails.SendParams({
-                "from": "Infrastructure <infra@mechanicaldinosaurs.net>",
-                "to": [recipient],
-                "subject": subject,
-                "text": message,
-            }))
-        except Exception as e:
-            print(f"error sending email: {str(e)}")
-            return HttpResponse("error sending email: " + str(e), status=500)
-    return render(request, 'send_email.html')
-
-@login_required
-def notifications(request):
-    notifications = Notification.objects.all().order_by('-created_at')
-    return render(request, 'notifications.html', {'notifications': notifications})
