@@ -1,27 +1,30 @@
 from django.urls import path
 from . import views
+from . import auth_views
+from . import machine_views
+from . import vm_views
+from . import k3_views
 
 urlpatterns = [
     path('', views.index, name='index'),
-    path('login/', views.login_view, name='login'),
-    path('passkeys-mgmt', views.passkeys_mgmt, name='passkeys_mgmt'),
-    path('logout/', views.logout_view, name='logout'),
-    path('machines/', views.machines, name='machines'),
-    path('machine/<str:machine_name>/', views.machine_detail, name='machine_detail'),
-    path('machine/<str:machine_name>/delete/', views.machine_delete, name='machine_delete'),
-    path("machine/<str:machine_name>/vms/create", views.create_vm, name="create_vm"),
-    path("machine/<str:machine_name>/vms/<str:vm_name>", views.vm_detail, name="vm_detail"),
-    path("machine/<str:machine_name>/vms/<str:vm_name>/start", views.vm_start, name="vm_start"),
-    path("machine/<str:machine_name>/vms/<str:vm_name>/stop", views.vm_stop, name="vm_stop"),
-    path("machine/<str:machine_name>/vms/<str:vm_name>/restart", views.vm_restart, name="vm_restart"),
-    path("machine/<str:machine_name>/vms/<str:vm_name>/delete", views.vm_delete, name="vm_delete"),
-    path("machine/<str:machine_name>/vms/<str:vm_name>/connect", views.vm_connect, name="vm_connect"),
-    path("machine/<str:machine_name>/vms/<str:vm_name>/<str:session_id>/disconnect", views.vm_disconnect, name="vm_disconnect"), 
-    # path("vms/", views.vms, name="vms")
+    path('login/', auth_views.login_view, name='login'),
+    path('passkeys-mgmt', auth_views.passkeys_mgmt, name='passkeys_mgmt'),
+    path('logout/', auth_views.logout_view, name='logout'),
+    path('machines/', machine_views.machines, name='machines'),
+    path('machine/<str:machine_name>/', machine_views.machine_detail, name='machine_detail'),
+    path('machine/<str:machine_name>/delete/', machine_views.machine_delete, name='machine_delete'),
+    path("machine/<str:machine_name>/vms/create", vm_views.create_vm, name="create_vm"),
+    path("machine/<str:machine_name>/vms/<str:vm_name>", vm_views.vm_detail, name="vm_detail"),
+    path("machine/<str:machine_name>/vms/<str:vm_name>/start", vm_views.vm_start, name="vm_start"),
+    path("machine/<str:machine_name>/vms/<str:vm_name>/stop", vm_views.vm_stop, name="vm_stop"),
+    path("machine/<str:machine_name>/vms/<str:vm_name>/restart", vm_views.vm_restart, name="vm_restart"),
+    path("machine/<str:machine_name>/vms/<str:vm_name>/delete", vm_views.vm_delete, name="vm_delete"),
+    path("machine/<str:machine_name>/vms/<str:vm_name>/connect", vm_views.vm_connect, name="vm_connect"),
+    path("machine/<str:machine_name>/vms/<str:vm_name>/<str:session_id>/disconnect", vm_views.vm_disconnect, name="vm_disconnect"), 
+    path('k3/deploy/', k3_views.deploy, name='deploy'),
+    path('k3/deployments/<str:namespace>/<str:deployment_name>/', k3_views.deployment_detail, name='deployment_detail'),
+    path('k3/pod/<str:namespace>/<str:pod_name>/logs', k3_views.pod_logs, name='pod_logs'),
+
     path('send-email/', views.send_email, name='send_email'), # should be removed in prod
     path('notifications/', views.notifications, name='notifications'),
-    path('k3/<str:namespace>/<str:pod_name>/', views.pod_detail, name='pod_detail'),
-    path('k3/deploy/', views.deploy, name='deploy'),
-    path('k3/deploy/<str:namespace>/<str:deployment_name>/', views.deployment_detail, name='deployment_detail'),
-    path('k3/pod/<str:namespace>/<str:pod_name>/logs', views.pod_logs, name='pod_logs')
 ]
