@@ -5,11 +5,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Deploy Kubernetes Pod</title>
+    <title>make a deployment</title>
     <link rel="stylesheet" href="{% static 'root.css' %}" />
     <style>
       :root {
-        --bg-color: #f9f8f6;
         --card-bg: #ffffff;
         --text-color: #2c2520;
         --border-color: #e2ded5;
@@ -17,7 +16,6 @@
       }
 
       body {
-        background-color: var(--bg-color);
         color: var(--text-color);
         margin: 0;
         padding: 40px 20px;
@@ -31,8 +29,6 @@
         background: var(--card-bg);
         padding: 30px;
         border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        border: 1px solid var(--border-color);
       }
 
       h2 {
@@ -127,7 +123,7 @@
   </head>
   <body>
     <div class="container">
-      <h2>Kubernetes Deployment Engine</h2>
+      <h2>deploy</h2>
 
       <form method="POST">
         {% csrf_token %}
@@ -157,7 +153,7 @@
 
         <!-- Compute Resource Strategy -->
         <fieldset>
-          <legend>Resource Strategy</legend>
+          <legend>Resources</legend>
           <div class="form-row">
             <div class="form-group">
               <label for="cpuResourceRequest">CPU Request</label>
@@ -185,11 +181,11 @@
           <label for="ports">Port Map Configuration</label>
           <input type="text" id="ports" name="ports" placeholder="e.g. 80:80,8080:0" />
           <span class="help-text"
-            >Comma-separated mappings -> containerPort:servicePort. Use 0 if the port shouldn't be exposed outside the
-            cluster.</span
+            >Comma-separated mappings -> containerPort:servicePort. Use 0 if the port shouldn't be exposed.</span
           >
         </div>
 
+        <!-- note: consider making this a table or something down the road -->
         <div class="form-group">
           <label for="env_vars">Environment Variables</label>
           <input type="text" id="env_vars" name="env_vars" placeholder="e.g. ENV=production,DEBUG=false" />
@@ -198,7 +194,7 @@
 
         <div class="form-group checkbox-group">
           <input type="checkbox" id="expose_externally" name="expose_externally" value="true" />
-          <label for="expose_externally">Expose via External LoadBalancer</label>
+          <label for="expose_externally">Set up a Service to Expose Internal Ports</label>
         </div>
 
         <button type="submit">Deploy to Cluster</button>

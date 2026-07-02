@@ -23,6 +23,10 @@ urlpatterns = [
     path("machine/<str:machine_name>/vms/<str:vm_name>/<str:session_id>/disconnect", vm_views.vm_disconnect, name="vm_disconnect"), 
     path('k3/deploy/', k3_views.deploy, name='deploy'),
     path('k3/deployments/<str:namespace>/<str:deployment_name>/', k3_views.deployment_detail, name='deployment_detail'),
+    path('k3/deployments/<str:namespace>/<str:deployment_name>/start', k3_views.start_deployment, name='start_deployment'),
+    path('k3/deployments/<str:namespace>/<str:deployment_name>/stop', k3_views.stop_deployment, name='stop_deployment'),
+    path('k3/deployments/<str:namespace>/<str:deployment_name>/delete', k3_views.delete_deployment, name='delete_deployment'),
+    
     path('k3/pod/<str:namespace>/<str:pod_name>/logs', k3_views.pod_logs, name='pod_logs'),
 
     path('send-email/', views.send_email, name='send_email'), # should be removed in prod

@@ -12,20 +12,10 @@ from kubernetes.client.rest import ApiException
 from django.conf import settings
 import resend
 from django.views.decorators.clickjacking import xframe_options_exempt
-
+from . import k3
 # note: organize imports
 
-# note: make these configurable
-vm_proxy_disconnect_host = "localhost"
-vm_proxy_disconnect_port = 3832  
-vm_proxy_disconnect_secret = "08ba70bc9cb9a486ed0cdc7798e9fb571f75f9e6888d40f07f076679f0781a4ebda8df3a2c6cb2d4bae434cbcbfc3300020214d79c97645daabef348b1bb4c8f"
-
 resend.api_key = environ.get("RESEND_API_KEY")
-
-k3_config_path = path.join(settings.BASE_DIR, 'k3s-config.yaml')
-config.load_kube_config(config_file=k3_config_path)
-kube_core_api = client.CoreV1Api()
-kube_app_api = client.AppsV1Api()
 
 # Create your views here.
 
@@ -47,7 +37,7 @@ def index(request):
     
     deployments = []
     try:
-        deployments_list = kube_app_api.list_deployment_for_all_namespaces(watch=False)
+        deployments_list = k3.kube_app_api.list_deployment_for_all_namespaces(watch=False)
         
         for deploy in deployments_list.items:
             # get desired and ready replicas (wow kaboom kablow)
@@ -59,13 +49,19 @@ def index(request):
             # i want new friends but they don't want me (the strokes)
             if ready_replicas == desired_replicas:
                 if ready_replicas == 0:
-                    status = "Done"
+                    status = "Stopped"
                 else:   
                     status = "Healthy"
             elif ready_replicas == 0: # oop
                 status = "Critical"
+            elif ready_replicas < desired_replicas:
+                status = "Scaling Up"
+            elif ready_replicas > desired_replicas and desired_replicas > 0:
+                status = "Scaling Down"
+            elif desired_replicas == 0 and ready_replicas > 0:
+                status = "Stopping"
             else:
-                status = "Scaling"
+                status = "Unknown"
 
             deployments.append({
                 "name": deploy.metadata.name,

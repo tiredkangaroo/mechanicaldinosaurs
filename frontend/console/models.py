@@ -20,6 +20,15 @@ class VMSession(models.Model):
     def __str__(self):
         return f"{self.vm_name} on {self.machine.name}"
 
+# this is NOT the source of truth for deployments; this just holds info that would not persist bc they're modified underlying (the replicas desired, when you stop it) and the service name (which needs a concrete way of referencing it)
+class Deployment(models.Model):
+    name = models.CharField(max_length=256)
+    replicas_desired = models.IntegerField()
+    service_name = models.CharField(max_length=256, null=True)
+
+    def __str__(self):
+        return f"{self.name} in {self.namespace}"
+
 # potentially tie a notification to a user
 class Notification(models.Model):
     title = models.CharField(max_length=256)

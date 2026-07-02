@@ -1,6 +1,6 @@
 from django.shortcuts import render, HttpResponse, redirect, reverse
 from django.http import StreamingHttpResponse
-from .models import Machine, VMSession, Notification
+from .models import Machine, VMSession, Notification, Deployment
 import requests, math, uuid, socket
 from dateutil import parser 
 from django.contrib.auth.decorators import login_required
@@ -12,6 +12,7 @@ from kubernetes.client.rest import ApiException
 from django.conf import settings
 import resend
 from django.views.decorators.clickjacking import xframe_options_exempt
+from . import k3
 
 def deploy(request):
     if request.method == 'POST':
@@ -97,7 +98,7 @@ def deploy(request):
 
         # boom wow a deployment
         try:
-            kube_app_api.create_namespaced_deployment(namespace=namespace, body=deployment)
+            k3.kube_app_api.create_namespaced_deployment(namespace=namespace, body=deployment)
         except ApiException as e:
             return HttpResponse(f"error creating deployment: {str(e)}", status=503)
 
@@ -117,9 +118,15 @@ def deploy(request):
             )
 
             try:
-                kube_core_api.create_namespaced_service(namespace=namespace, body=service)
+                k3.kube_core_api.create_namespaced_service(namespace=namespace, body=service)
             except ApiException as e:
                 return HttpResponse(f"error creating service: {str(e)}", status=503) # imagine getting this far just to have the service creation fail
+
+            try:
+                Deployment.objects.create(name=f"{name}-deployment", replicas_desired=replicas, service_name=f"{name}-service")
+            except Exception as e:
+                print(f"error creating deployment record in db: {str(e)}")
+        return redirect('deployment_detail', namespace=namespace, deployment_name=f"{name}-deployment")
 
     return render(request, 'deploy.html')
 
@@ -127,17 +134,29 @@ def deploy(request):
 def deployment_detail(request, namespace, deployment_name):
     try:
         # get the deployment
-        deployment = kube_app_api.read_namespaced_deployment(name=deployment_name, namespace=namespace)
+        deployment = k3.kube_app_api.read_namespaced_deployment(name=deployment_name, namespace=namespace)
         
         # get the metadata stuff (like we did up in index)
         desired_replicas = deployment.spec.replicas or 0
         ready_replicas = deployment.status.ready_replicas or 0
         updated_replicas = deployment.status.updated_replicas or 0
         available_replicas = deployment.status.available_replicas or 0
+
+        status = "Unknown"
+        if ready_replicas == desired_replicas:
+            if ready_replicas == 0:
+                status = "Stopped"
+            else:   
+                status = "Healthy"
+        elif ready_replicas == 0: # oop
+            status = "Critical"
+        else:
+            status = "Scaling"
         
         deploy_data = {
             "name": deployment.metadata.name,
             "namespace": deployment.metadata.namespace,
+            "status": status,
             "strategy": deployment.spec.strategy.type if deployment.spec.strategy else "RollingUpdate",
             "replicas_desired": desired_replicas,
             "replicas_ready": ready_replicas,
@@ -176,13 +195,18 @@ def deployment_detail(request, namespace, deployment_name):
                 })
         
         # pull the service if it exists
-        service = None
+
+        service_ports = []
         try:
-            service = kube_core_api.read_namespaced_service(name=f"{deployment_name.split('-')[0]}-service", namespace=namespace)
-            service_ports = [{"name": p.name, "port": p.port, "target_port": p.target_port} for p in service.spec.ports] if service and service.spec else []
-        except ApiException as e:
-            print("error fetching service for deployment: " + str(e))
-            service_ports = []
+            db_deployment = Deployment.objects.get(name=deployment_name)
+            try:
+                service = k3.kube_core_api.read_namespaced_service(name=f"{db_deployment.service_name}", namespace=namespace)
+                service_ports = [{"name": p.name, "port": p.port, "target_port": p.target_port} for p in service.spec.ports] if service and service.spec else []
+            except ApiException as e:
+                print("error fetching service for deployment: " + str(e))
+                service_ports = []
+        except Deployment.DoesNotExist:
+            pass
 
         # match deployments to their underlying runtime replicas
         # probably not a great way to do it bc u naming stuff could be messed up
@@ -193,8 +217,8 @@ def deployment_detail(request, namespace, deployment_name):
             # Convert label dict to standard comma-separated selector string (e.g. "app=my-app")
             selector_str = ",".join([f"{k}={v}" for k, v in selector_labels.items()])
             
-            # kube_core_api should be an instance of client.CoreV1Api()
-            managed_pods = kube_core_api.list_namespaced_pod(namespace=namespace, label_selector=selector_str)
+            # k3.kube_core_api should be an instance of client.CoreV1Api()
+            managed_pods = k3.kube_core_api.list_namespaced_pod(namespace=namespace, label_selector=selector_str)
             
             for pod in managed_pods.items:
                 pod_list_ctx.append({
@@ -220,7 +244,7 @@ def deployment_detail(request, namespace, deployment_name):
 @xframe_options_exempt
 def pod_logs(request, namespace, pod_name):
     def log_generator():
-        log_stream = kube_core_api.read_namespaced_pod_log(
+        log_stream = k3.kube_core_api.read_namespaced_pod_log(
             name=pod_name,
             namespace=namespace,
             follow=True,                # keep conn open
@@ -232,3 +256,70 @@ def pod_logs(request, namespace, pod_name):
             yield chunk
 
     return StreamingHttpResponse(log_generator(), content_type="text/plain")
+
+def stop_deployment(request, namespace, deployment_name):
+    try:
+        # see if deployment exists in db. if it doesn't, create it to store the replicas desired value as the current one
+        try:
+            Deployment.objects.get(name=deployment_name)
+        except Deployment.DoesNotExist:
+            # fetch the deployment to get the current replicas desired value
+            deployment = k3.kube_app_api.read_namespaced_deployment(name=deployment_name, namespace=namespace)
+            current_replicas = deployment.spec.replicas or 0
+            Deployment.objects.create(name=deployment_name, replicas_desired=current_replicas, service_name=None) # service name must be None bc we don't know it and it may not exist
+
+        # scale down the deployment to 0 replicas
+        body = client.V1Scale(
+            spec=client.V1ScaleSpec(replicas=0)
+        )
+        k3.kube_app_api.patch_namespaced_deployment_scale(name=deployment_name, namespace=namespace, body=body)
+        return redirect('deployment_detail', namespace=namespace, deployment_name=deployment_name)
+    except ApiException as e:
+        return HttpResponse(f"error stopping deployment: {str(e)}", status=503)
+
+def start_deployment(request, namespace, deployment_name):
+    desired_replicas = 1 # default to 1 if we can't find the record in db
+    try:
+        # fetch the deployment record from db to get the desired replicas value
+        deployment_record = Deployment.objects.get(name=deployment_name)
+        desired_replicas = deployment_record.replicas_desired
+    except:
+        pass
+
+    try:
+        # scale up the deployment to the desired replicas
+        body = client.V1Scale(
+            spec=client.V1ScaleSpec(replicas=desired_replicas)
+        )
+        k3.kube_app_api.patch_namespaced_deployment_scale(name=deployment_name, namespace=namespace, body=body)
+        return redirect('deployment_detail', namespace=namespace, deployment_name=deployment_name)
+    except ApiException as e:
+        return HttpResponse(f"error starting deployment: {str(e)}", status=503)
+
+def delete_deployment(request, namespace, deployment_name):
+    deployment = None
+    try:
+        deployment = Deployment.objects.get(name=deployment_name)
+    except Deployment.DoesNotExist:
+        pass
+
+    try:
+        # delete the deployment
+        k3.kube_app_api.delete_namespaced_deployment(name=deployment_name, namespace=namespace)
+        
+        if deployment and deployment.service_name:
+            try:
+                k3.kube_core_api.delete_namespaced_service(name=f"{deployment.service_name}", namespace=namespace)
+            except ApiException as e:
+                print(f"error deleting service for deployment: {str(e)}")
+        
+        return redirect('index')
+    except ApiException as e:
+        return HttpResponse(f"error deleting deployment: {str(e)}", status=503)
+    
+    try:
+        deployment.delete()
+    except Exception as e:
+        print(f"error deleting deployment record from db: {str(e)}")
+    
+    return redirect('index')
