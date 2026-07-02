@@ -29,10 +29,12 @@ DEBUG = True
 if DEBUG:
     CSRF_TRUSTED_ORIGINS = [
         "https://localhost:8080",
+        'https://mechanicaldinosaurs.net', 
     ]
 
 ALLOWED_HOSTS = [
     '.localhost',
+    'mechanicaldinosaurs.net',
 ]
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 

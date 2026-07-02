@@ -32,8 +32,10 @@ def index(request):
                     for vm in machine.vms:
                         vm['machine'] = machine
                         vms.append(vm)
+                machine.status = "reachable"
             except Exception as e:
                 print(f"error fetching vms for machine {machine.name}: {str(e)}")
+                machine.status = "unreachable"
     
     deployments = []
     try:
@@ -65,6 +67,7 @@ def index(request):
 
             deployments.append({
                 "name": deploy.metadata.name,
+                "display_name": deploy.metadata.name.replace("-deployment", ""),
                 "namespace": deploy.metadata.namespace,
                 "replicas_desired": desired_replicas,
                 "replicas_ready": ready_replicas,

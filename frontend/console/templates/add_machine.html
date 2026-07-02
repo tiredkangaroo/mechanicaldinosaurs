@@ -1,0 +1,45 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>add a machine</title>
+    <link rel="stylesheet" href="{% static 'root.css' %}" />
+    <style>
+      .add-machine-form {
+        max-width: 400px;
+        margin: 50px auto;
+        padding: 20px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        background-color: #f9f9f9;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      input {
+        padding: 4px 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 style="text-align: center">add a machine</h1>
+    <form class="add-machine-form" method="POST" action="{% url 'add_machine' %}">
+      {% csrf_token %}
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <label for="name">Machine Name:</label>
+        <input type="text" id="name" name="name" required />
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <label for="hostport">Hostport (e.g. 100.114.97.103:28526):</label>
+        <input type="text" id="hostport" name="hostport" required />
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <label for="secret_key">Secret Key:</label>
+        <input type="password" id="secret_key" name="secret_key" required />
+      </div>
+      <button type="submit">Add Machine</button>
+    </form>
+  </body>
+</html>

@@ -15,6 +15,10 @@ from django.views.decorators.clickjacking import xframe_options_exempt
 
 @login_required
 def machines(request):
+    return redirect('index')
+
+@login_required
+def add_machine(request):
     if request.method == 'POST':
         name = request.POST.get('name')
         hostport = request.POST.get('hostport')
@@ -23,7 +27,7 @@ def machines(request):
         machine = Machine(name=name, hostport=hostport, secret_key=secret_key)
         machine.save()
         return redirect('machine_detail', machine_name=name)
-    return redirect('index')
+    return render(request, 'add_machine.html')
 
 @login_required
 def machine_detail(request, machine_name):

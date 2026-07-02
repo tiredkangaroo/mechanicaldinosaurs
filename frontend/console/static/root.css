@@ -31,7 +31,7 @@ button {
     padding: 0.4em;
 }
 
-.status-running, .status-Running, .status-healthy {
+.status-running, .status-Running, .status-healthy, .status-reachable {
     background-color: green;
 }
 
@@ -43,6 +43,6 @@ button {
     background-color: gray;
 }
 
-.status-critical {
+.status-critical, .status-unreachable {
     background-color: red;
 }

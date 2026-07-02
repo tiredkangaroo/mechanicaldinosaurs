@@ -11,6 +11,8 @@ urlpatterns = [
     path('passkeys-mgmt', auth_views.passkeys_mgmt, name='passkeys_mgmt'),
     path('logout/', auth_views.logout_view, name='logout'),
     path('machines/', machine_views.machines, name='machines'),
+    path('machine/add/', machine_views.add_machine, name='add_machine'),
+    # perhaps find some way to invalidate "add" being the name of a machine lol
     path('machine/<str:machine_name>/', machine_views.machine_detail, name='machine_detail'),
     path('machine/<str:machine_name>/delete/', machine_views.machine_delete, name='machine_delete'),
     path("machine/<str:machine_name>/vms/create", vm_views.create_vm, name="create_vm"),
