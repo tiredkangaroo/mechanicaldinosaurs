@@ -34,7 +34,8 @@ func (a *Automation) OnTriggered(c Context) {
 	}
 	slog.Info("automation condition evaluated", "automation_id", a.ID, "result", v)
 	if v {
-		a.Action.Do(c)
+		err = a.Action.Do(c)
+		slog.Info("automation action executed", "automation_id", a.ID, "error", err)
 	}
 }
 
@@ -134,6 +135,9 @@ func (ac *AutomationCommunicable) ToAutomation() (*Automation, error) {
 	var action Action
 	switch ac.Action.Type {
 	case "email":
+		if ac.Action.Email == nil {
+			return nil, fmt.Errorf("email action is nil but action type is email")
+		}
 		action = ac.Action.Email
 	default:
 		return nil, fmt.Errorf("unknown action type: %s", ac.Action.Type)

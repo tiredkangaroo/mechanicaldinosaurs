@@ -36,4 +36,5 @@ urlpatterns = [
     path('k3/pod/<str:namespace>/<str:pod_name>/logs', k3_views.pod_logs, name='pod_logs'),
 
     path('automations/create/', automation_views.create_automation, name='create_automation'),
+    path('automations/<str:automation_id>/', automation_views.automation_detail, name='automation_detail'),
 ]

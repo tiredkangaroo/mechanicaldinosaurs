@@ -1,6 +1,9 @@
 package main
 
-import "strings"
+import (
+	"reflect"
+	"strings"
+)
 
 type Context struct {
 	Data map[string]any
@@ -8,17 +11,15 @@ type Context struct {
 
 func (c *Context) Get(key string) (any, bool) {
 	parts := strings.Split(key, ".")
-	current := c.Data
-	for i, part := range parts {
-		if i == len(parts)-1 { // final part (key)
-			value, ok := current[part]
-			return value, ok
-		}
-		next, ok := current[part].(map[string]any)
-		if !ok {
+
+	current := reflect.ValueOf(c.Data)
+
+	for _, part := range parts {
+		val := current.MapIndex(reflect.ValueOf(part))
+		if !val.IsValid() {
 			return nil, false
 		}
-		current = next
+		current = reflect.ValueOf(val.Interface())
 	}
-	return nil, false
+	return current.Interface(), true
 }

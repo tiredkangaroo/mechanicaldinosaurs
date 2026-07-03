@@ -9,7 +9,8 @@
     <style>
       .machines,
       .vms,
-      .deployments {
+      .deployments,
+      .automations {
         background-color: #f7e9c1;
         padding: 20px;
       }
@@ -84,6 +85,39 @@
       }
       #machine-select {
         padding: 8px;
+      }
+      .automations-title {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+      }
+      #add-automation-button {
+        font-size: 150%;
+        padding-left: 0.9rem;
+        padding-right: 0.9rem;
+      }
+      .automation-card {
+        background-color: #f0f0f0;
+        padding: 16px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 2.5rem;
+      }
+      .automation-step {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+      }
+      .automation-badge {
+        text-transform: uppercase;
+        min-width: 75px;
+        text-align: center;
+        margin-right: 10px;
+      }
+      .automation-text {
+        color: #333;
       }
     </style>
   </head>
@@ -230,8 +264,44 @@
           {% endfor %}
         </div>
       </div>
-    </div>
 
+      <div class="automations">
+        <div class="automations-title">
+          <h1 style="margin-top: 0">your automations</h1>
+          <a href="#">
+            <button id="add-automation-button">+</button>
+          </a>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px">
+          {% for automation in automations %}
+          <a href="{% url 'automation_detail' automation.id %}" style="text-decoration: none; color: inherit">
+            <div class="automation-card">
+              <p style="margin-top: 0; margin-bottom: 0; font-size: 0.85rem; color: gray">{{ automation.id }}</p>
+              <div style="display: flex; flex-direction: column; gap: 2.5rem">
+                <div class="automation-step">
+                  <span class="automation-badge" style="color: #0c5460">Trigger</span>
+                  <span class="automation-text">{{ automation.trigger.name }}</span>
+                </div>
+
+                <div class="automation-step">
+                  <span class="automation-badge" style="color: #856404">Condition</span>
+                  <span class="automation-text">{{ automation.condition.name }}</span>
+                </div>
+
+                <div class="automation-step">
+                  <span class="automation-badge" style="color: #155724">Action</span>
+                  <span class="automation-text">{{ automation.action.name }}</span>
+                </div>
+              </div>
+            </div>
+          </a>
+          {% empty %}
+          <p style="margin: 0">No automations found.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
     <script>
       function toggleAddMachineDialog() {
         const dialog = document.getElementById("add-machine-dialog");

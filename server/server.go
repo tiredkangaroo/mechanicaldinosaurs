@@ -37,6 +37,26 @@ type Info struct {
 	Battery    string `json:"battery,omitempty"` // battery model
 }
 
+func (i Info) Map() map[string]any {
+	return map[string]any{
+		"os":               i.OS,
+		"os_release":       i.OSRelease,
+		"hostname":         i.Hostname,
+		"uptime":           i.Uptime,
+		"cpu":              i.CPU,
+		"arch":             i.CPUArch,
+		"cpu_num":          i.CPUNum,
+		"cpu_usage":        i.CPUUsage,
+		"cpu_temp":         i.CPUTemp,
+		"memory":           i.MemoryCapacity,
+		"memory_used":      i.MemoryUsed,
+		"storage_capacity": i.StorageCapacity,
+		"storage_used":     i.StorageUsed,
+		"has_battery":      i.HasBattery,
+		"battery":          i.Battery,
+	}
+}
+
 type Service struct {
 	Name        string `json:"name"` // will be in form: name.service
 	Description string `json:"description"`

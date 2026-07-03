@@ -10,11 +10,11 @@ import (
 var AUTOMATIONS_SAVE_PATH = os.Getenv("AUTOMATIONS_SAVE_PATH")
 
 func main() {
-	loadAutomations()
+	loadSave()
 	serve()
 }
 
-func loadAutomations() {
+func loadSave() {
 	automations = []*Automation{} // reset automations to empty slice before loading from file
 	raw_data, err := os.ReadFile(AUTOMATIONS_SAVE_PATH)
 	if err != nil {
@@ -22,20 +22,20 @@ func loadAutomations() {
 		return
 	}
 	var data struct {
-		automationsCommunicable []*AutomationCommunicable
-		machines                []Machine
+		AutomationsCommunicable []*AutomationCommunicable `json:"automations"`
+		Machines                []Machine                 `json:"machines"`
 	}
 	err = json.Unmarshal(raw_data, &data)
 	if err != nil {
 		slog.Error("failed to unmarshal automations file", "error", err)
 		return
 	}
-	fmt.Println("loaded machines communicated from save file: ", len(data.machines))
-	fmt.Println("loaded automations communicated from save file: ", len(data.automationsCommunicable))
+	fmt.Println("loaded machines communicated from save file: ", len(data.Machines))
+	fmt.Println("loaded automations communicated from save file: ", len(data.AutomationsCommunicable))
 
-	machines = data.machines
+	machines = data.Machines
 
-	for _, ac := range data.automationsCommunicable {
+	for _, ac := range data.AutomationsCommunicable {
 		automation, err := ac.ToAutomation()
 		if err != nil {
 			slog.Error("failed to convert communicated automation to automation", "error", err)
@@ -53,8 +53,14 @@ func loadAutomations() {
 	}
 }
 
-func saveAutomations() {
-	data, err := json.MarshalIndent(automations, "", "  ") // again the marshal json function should handle this to make it communicable
+func pushToSave() {
+	data, err := json.MarshalIndent(struct {
+		Automations []*Automation `json:"automations"`
+		Machines    []Machine     `json:"machines"`
+	}{
+		Automations: automations,
+		Machines:    machines,
+	}, "", "  ") // again the marshal json function should handle the automations to make it communicable
 	if err != nil {
 		slog.Error("failed to marshal automations to save file", "error", err)
 		return

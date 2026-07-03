@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"sync"
 	"time"
-
-	"github.com/tiredkangaroo/mechanicaldinosaurs/server"
 )
 
 type Trigger interface {
@@ -114,7 +112,7 @@ func NewIntervalTrigger(d time.Duration) *IntervalTrigger {
 
 // data about machines just got refreshed
 type MachineInfoRefreshTrigger struct {
-	subscription chan map[string]*server.Info
+	subscription chan map[string]map[string]any
 	c            chan struct{}
 	closeOnce    sync.Once
 }

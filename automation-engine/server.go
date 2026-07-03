@@ -50,6 +50,7 @@ func serve() {
 	api.POST("/automations", func(c echo.Context) error {
 		var newAutomation Automation // there's an unmarshal json that handles this stuff, the actual json that should be given should be the communicable automation
 		if err := c.Bind(&newAutomation); err != nil {
+			slog.Error("oop bad request body automation", "error", err)
 			return c.JSON(400, map[string]string{"error": "invalid request body"})
 		}
 		if newAutomation.Enabled {
@@ -61,7 +62,7 @@ func serve() {
 		}
 		automations = append(automations, &newAutomation)
 		slog.Info("new automation added", "automation_id", newAutomation.ID)
-		saveAutomations() // save automations to file after adding new automation
+		pushToSave() // save automations to file after adding new automation
 		return c.JSON(201, map[string]string{"status": "ok"})
 	})
 
@@ -91,7 +92,7 @@ func serve() {
 		}
 		automations = append(automations[:index], automations[index+1:]...) // remove the automation from the slice
 		slog.Info("automation deleted", "automation_id", automation.ID)
-		saveAutomations() // save automations to file after deleting automation
+		pushToSave() // save automations to file after deleting automation
 		return c.JSON(200, map[string]string{"status": "ok"})
 	})
 
@@ -112,7 +113,7 @@ func serve() {
 			return c.JSON(500, map[string]string{"error": "failed to enable automation: " + err.Error()})
 		}
 		slog.Info("automation enabled", "automation_id", automation.ID)
-		saveAutomations() // save automations to file after enabling automation
+		pushToSave() // save automations to file after enabling automation
 		return c.JSON(200, map[string]string{"status": "ok"})
 	})
 
@@ -133,7 +134,7 @@ func serve() {
 			return c.JSON(500, map[string]string{"error": "failed to disable automation: " + err.Error()})
 		}
 		slog.Info("automation disabled", "automation_id", automation.ID)
-		saveAutomations() // save automations to file after disabling automation
+		pushToSave() // save automations to file after disabling automation
 		return c.JSON(200, map[string]string{"status": "ok"})
 	})
 
@@ -144,13 +145,14 @@ func serve() {
 		}
 
 		slog.Info("machines updated", "machines", machines)
+		pushToSave() // save machines to file after updating machines
 		return c.JSON(200, map[string]string{"status": "ok"})
 	})
 
 	// continuously refresh data every 30 seconds in a separate goroutine
 	cancel := make(chan struct{})
 	go func() {
-		ticker := time.NewTicker(30 * time.Second)
+		ticker := time.NewTicker(1 * time.Minute)
 		defer ticker.Stop()
 		for {
 			select {

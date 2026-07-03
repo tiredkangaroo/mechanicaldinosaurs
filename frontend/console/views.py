@@ -11,10 +11,17 @@ from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 from django.conf import settings
 from django.views.decorators.clickjacking import xframe_options_exempt
+from django.utils.safestring import mark_safe
+
 from . import k3
 # note: organize imports
 
 # Create your views here.
+
+# note: fix this
+automation_engine_url = environ.get("AUTOMATION_ENGINE_URL")
+automation_engine_secret = environ.get("AUTOMATION_ENGINE_SECRET")
+
 
 @login_required
 def index(request):
@@ -77,5 +84,33 @@ def index(request):
 
     # sort by namespace and then by status (crititcal > scaling > healthy) and then by created at
     deployments.sort(key=lambda x: (x['namespace'], x['status'], x['created_at']))
-    
-    return render(request, 'index.html', {'machines': machines, 'vms': vms, 'deployments': deployments})
+
+    automations = []
+    try:
+        response = requests.get(f"{automation_engine_url}/api/automations", headers={"Authorization": f"Bearer {automation_engine_secret}"})
+        automations = response.json()
+    except Exception as e:
+        print(f"error fetching automations: {str(e)}")
+
+    operation_to_symbol = {
+        "greater than": ">",
+        "less than": "<",
+        "equals": "==",
+        "greater than or equal": ">=",
+        "less than or equal": "<=",
+    }
+    for automation in automations:
+        if automation["trigger"]["type"] == "time":
+            human_readable_time = parser.parse(automation["trigger"]["time"]).strftime("%Y-%m-%d %H:%M:%S")
+            automation["trigger"]["name"] = mark_safe(f"<b>at</b> {automation['trigger']['time']}")
+        elif automation["trigger"]["type"] == "interval":
+            automation["trigger"]["name"] = mark_safe(f"<b>every</b> {automation['trigger']['every']} <b>seconds</b>")
+        elif automation["trigger"]["type"] == "machines info refresh":
+            automation["trigger"]["name"] = mark_safe(f"<b>on</b> machine info refresh")
+        
+        automation["condition"]["name"] = mark_safe(f"<div style='display: flex; flex-direction: row; gap: 2px; width: 100%;'>{'<b>NOT</b> ' if automation['condition']['not'] else ''}<pre>{automation['condition']['variable']}</pre> <p>{operation_to_symbol.get(automation['condition']['op'], automation['condition']['op'])} {automation['condition']['value']}</p></div>")
+
+        if automation["action"]["type"] == "email":
+            automation["action"]["name"] = mark_safe(f"<b>send email to</b> {automation['action']['email']['to']}")
+
+    return render(request, 'index.html', {'machines': machines, 'vms': vms, 'deployments': deployments, 'automations': automations})

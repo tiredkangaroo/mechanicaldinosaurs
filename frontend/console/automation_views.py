@@ -51,14 +51,16 @@ def create_automation(request):
             "type": request.POST.get("action_type"),
         }
         if action["type"] == "email":
-            action["email_to"] = request.POST.get("action_email_to")
-            action["email_subject"] = request.POST.get("action_email_subject")
-            action["email_body"] = request.POST.get("action_email_body")
+            action["email"] = {
+                "to": request.POST.get("action_email_to"),
+                "subject": request.POST.get("action_email_subject"),
+                "body": request.POST.get("action_email_body"),
+            }
         
         # send to automation engine
         automation_data = {
             "id": str(uuid.uuid4()),
-            "enabled": "false",
+            "enabled": False,
             "trigger": trigger,
             "condition": condition,
             "action": action,

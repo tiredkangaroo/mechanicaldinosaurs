@@ -128,17 +128,7 @@
         >
           <option value="time">time</option>
         </select>
-        <select id="condition_operator" name="condition_operator" required>
-          <option value="equals">==</option>
-          <option value="greater than">&gt;</option>
-          <option value="less than">&lt;</option>
-          <option value="greater than or equal">&gt;=</option>
-          <option value="less than or equal">&lt;=</option>
-          <option value="contains">contains</option>
-          <option value="starts with">starts with</option>
-          <option value="ends with">ends with</option>
-          <option value="regex match">regex match</option>
-        </select>
+        <select id="condition_operator" name="condition_operator" required></select>
         <input type="text" step="any" id="condition_value_number" name="condition_value" />
       </div>
 
@@ -218,6 +208,27 @@
         ],
       };
 
+      // operators available per value type. "equals" works for every type;
+      // the comparison operators are numbers-only and the string-matching
+      // operators are strings-only.
+      const operatorsByType = {
+        number: [
+          { value: "equals", label: "==" },
+          { value: "greater than", label: "&gt;" },
+          { value: "less than", label: "&lt;" },
+          { value: "greater than or equal", label: "&gt;=" },
+          { value: "less than or equal", label: "&lt;=" },
+        ],
+        string: [
+          { value: "equals", label: "==" },
+          { value: "contains", label: "contains" },
+          { value: "starts with", label: "starts with" },
+          { value: "ends with", label: "ends with" },
+          { value: "regex match", label: "regex match" },
+        ],
+        boolean: [{ value: "equals", label: "==" }],
+      };
+
       function updateTriggerFields() {
         const type = document.getElementById("trigger_type").value;
         document.getElementById("trigger_time_fields").classList.toggle("hidden", type !== "time");
@@ -269,12 +280,34 @@
         updateConditionValueField();
       }
 
+      function updateConditionOperatorOptions(valueType) {
+        const operatorSelect = document.getElementById("condition_operator");
+        const previousValue = operatorSelect.value;
+        const operators = operatorsByType[valueType] || operatorsByType.string;
+
+        operatorSelect.innerHTML = "";
+        operators.forEach((op) => {
+          const opt = document.createElement("option");
+          opt.value = op.value;
+          opt.innerHTML = op.label;
+          operatorSelect.appendChild(opt);
+        });
+
+        // keep the previous operator selected if it's still valid for this
+        // type, otherwise fall back to the first (always "equals").
+        if (operators.some((op) => op.value === previousValue)) {
+          operatorSelect.value = previousValue;
+        }
+      }
+
       function updateConditionValueField() {
         const select = document.getElementById("condition_variable_name_selection");
         const selectedOption = select.options[select.selectedIndex];
         const valueType = (selectedOption && selectedOption.dataset.type) || "string";
 
         document.getElementById("condition_value_type").value = valueType;
+
+        updateConditionOperatorOptions(valueType);
 
         const numberInput = document.getElementById("condition_value_number");
         const booleanRow = document.getElementById("condition_value_boolean_row");
