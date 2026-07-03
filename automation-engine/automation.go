@@ -14,26 +14,36 @@ type Automation struct {
 	ID        string
 	Enabled   bool
 	Trigger   Trigger
-	Condition Condition
+	Condition *Condition
 	Action    Action
 }
 
 func (a *Automation) String() string {
 	triggerName := a.Trigger.Name()
-	conditionStr := a.Condition.String()
 	actionName := a.Action.Name()
 
-	return fmt.Sprintf("on event: %s, if condition %s is met, then do %s", triggerName, conditionStr, actionName)
+	s := "on event: " + triggerName
+	if a.Condition != nil {
+		s += ", if condition " + a.Condition.String() + " is met"
+	}
+	s += ", then do " + actionName
+	return s
 }
 
 func (a *Automation) OnTriggered(c Context) {
 	slog.Info("automation triggered", "automation_id", a.ID)
-	v, err := a.Condition.Evaluate(c)
-	if err != nil {
-		slog.Error("failed to evaluate condition", "automation_id", a.ID, "error", err)
+
+	var v bool = true
+	var err error
+
+	if a.Condition != nil {
+		v, err = a.Condition.Evaluate(c)
+		if err != nil {
+			slog.Error("failed to evaluate condition", "automation_id", a.ID, "error", err)
+		}
+		slog.Info("automation condition evaluated", "automation_id", a.ID, "result", v)
 	}
-	slog.Info("automation condition evaluated", "automation_id", a.ID, "result", v)
-	if v {
+	if v { // if condition is met (or no condition), then do action
 		err = a.Action.Do(c)
 		slog.Info("automation action executed", "automation_id", a.ID, "error", err)
 	}
@@ -87,7 +97,7 @@ type AutomationCommunicable struct {
 	ID        string              `json:"id"`
 	Enabled   bool                `json:"enabled"`
 	Trigger   TriggerCommunicable `json:"trigger"`
-	Condition Condition           `json:"condition"`
+	Condition *Condition          `json:"condition,omitempty"`
 	Action    ActionCommunicable  `json:"action"`
 }
 

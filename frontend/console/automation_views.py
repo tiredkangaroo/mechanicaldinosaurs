@@ -45,6 +45,8 @@ def create_automation(request):
             condition["value"] = float(request.POST.get("condition_value"))
         elif cond_value_type == "boolean":
             condition["value"] = request.POST.get("condition_value").lower() == "true"
+        if not request.POST.get("condition_value"):
+            condition = None # no condition
 
         # action
         action = {
