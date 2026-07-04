@@ -278,7 +278,9 @@
           {% for automation in automations %}
           <a href="{% url 'automation_detail' automation.id %}" style="text-decoration: none; color: inherit">
             <div class="automation-card">
-              <p style="margin-top: 0; margin-bottom: 0; font-size: 0.85rem; color: gray">{{ automation.id }}</p>
+              <p style="margin-top: 0; margin-bottom: 0; font-size: 0.85rem; color: gray">
+                {{ automation.id }} <span style="font-weight: 800; color: {{ automation.enabled|yesno:"green,red" }}">{{ automation.enabled|yesno:"enabled,disabled" }}</span>
+              </p>
               <div style="display: flex; flex-direction: column; gap: 2.5rem">
                 <div class="automation-step">
                   <span class="automation-badge" style="color: #0c5460">Trigger</span>
