@@ -4,24 +4,97 @@ from os import environ
 import uuid, requests, json
 from .models import Machine
 from django.utils.safestring import mark_safe
+from dateutil import parser
+import requests
 
 
 automation_engine_url = environ.get("AUTOMATION_ENGINE_URL")
 automation_engine_secret = environ.get("AUTOMATION_ENGINE_SECRET")
 
+# note: a lot of that code was copied from the index view, maybe we can refactor it into a shared func to avoid duplication spaghetti
 def automation_detail(request, automation_id):
-    # get automations from automation engine
-    automation = []
     try:
-        response = requests.get(f"{automation_engine_url}/api/automations/" + automation_id, headers={"Authorization": f"Bearer {automation_engine_secret}"})
-        if response.status_code == 200:
-            automation = response.json()
-        else:
-            return HttpResponse(f"error fetching automation: {response.status_code} - {response.text}", status=response.status_code)
+        response = requests.get(
+            f"{automation_engine_url}/api/automations/{automation_id}", 
+            headers={"Authorization": f"Bearer {automation_engine_secret}"}
+        )
+        if response.status_code != 200:
+            return HttpResponse(
+                f"error fetching automation: {response.status_code} - {response.text}", 
+                status=response.status_code
+            )
+        automation = response.json()
     except Exception as e:
         return HttpResponse(f"error fetching automation: {e}", status=500)
     
+    trigger = automation.get("trigger", {})
+    if trigger.get("type") == "time":
+        try:
+            human_readable_time = parser.parse(trigger["time"]).strftime("%Y-%m-%d %H:%M:%S")
+            trigger["name"] = mark_safe(f"at {human_readable_time}")
+        except Exception:
+            trigger["name"] = mark_safe(f"at {trigger.get('time')}")
+    elif trigger.get("type") == "interval":
+        trigger["name"] = mark_safe(f"every {trigger.get('every')} seconds")
+    elif trigger.get("type") == "machines info refresh":
+        trigger["name"] = mark_safe(f"on machine info refresh")
+    
+    operation_to_symbol = {
+        "greater than": ">",
+        "less than": "<",
+        "equals": "==",
+        "greater than or equal": ">=",
+        "less than or equal": "<=",
+    }
+    condition = automation.get("condition", {})
+    if condition:
+        not_prefix = "NOT " if condition.get("not") else ""
+        op_symbol = operation_to_symbol.get(condition.get("op"), condition.get("op", ""))
+        condition["name"] = mark_safe(
+            f"{not_prefix}<pre style='margin:0; padding:2px 6px;'>{condition.get('variable')} "
+            f"{op_symbol} {condition.get('value')}</pre></div>"
+        )
+
+    action = automation.get("action", {})
+    if action.get("type") == "email":
+        action["name"] = mark_safe(f"send email to {action.get('email', {}).get('to')}")
+    
+    if automation.get("error_logs"):
+        automation["error_logs"] = list(reversed(automation["error_logs"]))  # Show the most recent errors first
+        
     return render(request, "automation_detail.html", {"automation": automation})
+
+def enable_automation(request, automation_id):
+    try:
+        response = requests.post(
+            f"{automation_engine_url}/api/automations/{automation_id}/enable", 
+            headers={"Authorization": f"Bearer {automation_engine_secret}"}
+        )
+        if response.status_code != 200:
+            return HttpResponse(
+                f"error enabling automation: {response.status_code} - {response.text}", 
+                status=response.status_code
+            )
+    except Exception as e:
+        return HttpResponse(f"error enabling automation: {e}", status=500)
+    
+    return redirect(reverse("automation_detail", args=[automation_id]))
+
+def disable_automation(request, automation_id):
+    try:
+        response = requests.post(
+            f"{automation_engine_url}/api/automations/{automation_id}/disable", 
+            headers={"Authorization": f"Bearer {automation_engine_secret}"}
+        )
+        if response.status_code != 200:
+            return HttpResponse(
+                f"error disabling automation: {response.status_code} - {response.text}", 
+                status=response.status_code
+            )
+    except Exception as e:
+        return HttpResponse(f"error disabling automation: {e}", status=500)
+
+    return redirect(reverse("automation_detail", args=[automation_id]))
 
 def create_automation(request):
     if request.method == "POST":
@@ -40,13 +113,14 @@ def create_automation(request):
             "op": request.POST.get("condition_operator"),
             "not": request.POST.get("condition_negate") == "on",
         }
-        cond_value_type = request.POST.get("condition_value_type")
-        if cond_value_type == "number":
-            condition["value"] = float(request.POST.get("condition_value"))
-        elif cond_value_type == "boolean":
-            condition["value"] = request.POST.get("condition_value").lower() == "true"
-        if not request.POST.get("condition_value"):
-            condition = None # no condition
+        if request.POST.get("enable_condition") == "on":
+            cond_value_type = request.POST.get("condition_value_type")
+            if cond_value_type == "number":
+                condition["value"] = float(request.POST.get("condition_value"))
+            elif cond_value_type == "boolean":
+                condition["value"] = request.POST.get("condition_value").lower() == "true"
+        else:
+            condition = None
 
         # action
         action = {
@@ -86,3 +160,19 @@ def create_automation(request):
     machine_names = [machine.name for machine in machines]
     
     return render(request, "create_automation.html", {"machine_names": mark_safe(json.dumps(machine_names))})
+
+def clear_automation_error_logs(request, automation_id):
+    try:
+        response = requests.post(
+            f"{automation_engine_url}/api/automations/{automation_id}/clear-logs", 
+            headers={"Authorization": f"Bearer {automation_engine_secret}"}
+        )
+        if response.status_code != 200:
+            return HttpResponse(
+                f"error clearing automation logs: {response.status_code} - {response.text}", 
+                status=response.status_code
+            )
+    except Exception as e:
+        return HttpResponse(f"error clearing automation logs: {e}", status=500)
+
+    return redirect(reverse("automation_detail", args=[automation_id]))

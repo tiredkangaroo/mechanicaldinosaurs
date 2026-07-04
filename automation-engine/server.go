@@ -138,6 +138,24 @@ func serve() {
 		return c.JSON(200, map[string]string{"status": "ok"})
 	})
 
+	api.POST("/automations/:id/clear-logs", func(c echo.Context) error {
+		id := c.Param("id")
+		var automation *Automation
+		for _, a := range automations {
+			if a.ID == id {
+				automation = a
+				break
+			}
+		}
+		if automation == nil {
+			return c.JSON(404, map[string]string{"error": "automation not found"})
+		}
+		automation.ErrorLogs = []Error{}
+		slog.Info("automation error logs cleared", "automation_id", automation.ID)
+		pushToSave() // save automations to file after clearing logs
+		return c.JSON(200, map[string]string{"status": "ok"})
+	})
+
 	api.POST("/machines", func(c echo.Context) error {
 		machines = []Machine{}
 		if err := c.Bind(&machines); err != nil {

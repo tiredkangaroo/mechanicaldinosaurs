@@ -1,0 +1,231 @@
+{% load time_filters %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Automation Details - {{ automation.id }}</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'root.css' %}" />
+    <style>
+      body {
+        color: #222;
+        line-height: 1.6;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      h1 {
+        text-align: center;
+        margin-bottom: 20px;
+        font-weight: 400;
+        font-size: 2.2rem;
+      }
+
+      h1 span {
+        font-family: inherit;
+        font-weight: 700;
+      }
+
+      h2 {
+        padding-bottom: 8px;
+        margin-top: 40px;
+        margin-bottom: 20px;
+        font-size: 1.5rem;
+        border-bottom: 2px solid #222;
+      }
+
+      h3 {
+        margin-top: 30px;
+        margin-bottom: 15px;
+        font-size: 1.2rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+        font-size: 0.95rem;
+      }
+
+      th,
+      td {
+        padding: 10px 12px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background-color: #f5f5f5;
+        font-weight: 600;
+        color: #555;
+        width: 25%;
+      }
+
+      tr:nth-child(even) {
+        background-color: #f9f9f9;
+      }
+
+      code,
+      pre {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 0.85rem;
+        background-color: #f6f8fa;
+        padding: 2px 6px;
+        border-radius: 4px;
+        word-break: break-all;
+      }
+
+      pre {
+        padding: 12px;
+        white-space: pre-wrap;
+        margin: 10px 0;
+        line-height: 1.4;
+      }
+
+      p {
+        margin: 12px 0;
+      }
+
+      .container-block {
+        margin-bottom: 40px;
+        padding: 20px;
+        border: 4px solid black;
+      }
+
+      .status-badge {
+        font-weight: bold;
+        text-transform: uppercase;
+        padding: 4px 8px;
+        border: 2px solid #000;
+        border-radius: 4px;
+      }
+      .status-enabled {
+        background-color: #d4edda;
+        color: #155724;
+      }
+      .status-disabled {
+        background-color: #f8d7da;
+        color: #721c24;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 style="margin-bottom: 0">automation <span>{{ automation.id }}</span></h1>
+
+    <div style="display: flex; justify-content: center; align-items: center; gap: 9px; margin-top: 15px">
+      <input
+        data-checked="{{ automation.enabled }}"
+        type="checkbox"
+        id="toggle_{{ automation.id }}"
+        class="switch-input"
+        onchange="toggleAutomation()"
+      />
+    </div>
+
+    <div style="text-align: center; margin-top: 30px">
+      <b>Last Triggered:</b>
+      {% if automation.last_triggered != "0001-01-01T00:00:00Z" %}
+      <!--  -->
+      {{ automation.last_triggered}} {% else %}
+      <!--  -->
+      Never {% endif %}
+    </div>
+    <div style="display: flex; justify-content: center; align-items: center; gap: 6px; margin-top: 6px">
+      <b>Last Action Done:</b> {% if automation.last_action_done != "0001-01-01T00:00:00Z" %}{{
+      automation.last_action_done }}{% else %}Never{% endif %}
+    </div>
+
+    <h3 style="margin-top: 0"><span style="color: #0c5460">trigger:</span> {{ automation.trigger.name }}</h3>
+    {% if automation.condition %}
+    <h3 style="margin-top: 0"><span style="color: #856404">condition:</span> {{ automation.condition.name }}</h3>
+    {% else %}
+    <h3 style="margin-top: 0"><span style="color: #856404">condition:</span> No conditions evaluated.</h3>
+    {% endif %}
+    <h3 style="margin-top: 0"><span style="color: #155724">action:</span> {{ automation.action.name }}</h3>
+    {% if automation.action.type == "email" and automation.action.email %}
+    <div style="margin-left: 20px">
+      <h4 style="margin-top: 20px; margin-bottom: 10px; font-size: 1rem">email payload</h4>
+      <table>
+        <tr>
+          <th>Recipients (To)</th>
+          <td><code>{{ automation.action.email.to }}</code></td>
+        </tr>
+        <tr>
+          <th>Subject Header</th>
+          <td><strong>{{ automation.action.email.subject }}</strong></td>
+        </tr>
+        <tr>
+          <th>Message Body</th>
+          <td><pre style="margin: 0">{{ automation.action.email.body }}</pre></td>
+        </tr>
+      </table>
+    </div>
+    {% endif %}
+
+    <h2>error logs</h2>
+    {% if automation.error_logs %}
+    <div style="padding: 10px 20px; border: 4px solid #721c24; background-color: #fff5f5; margin-bottom: 20px">
+      <form method="post" action="{% url 'clear_automation_error_logs' automation.id %}">
+        {% csrf_token %}
+        <button type="submit" style="margin-bottom: 20px">Clear Error Logs</button>
+      </form>
+      <ul style="padding-left: 20px; margin: 0">
+        {% for log in automation.error_logs %}
+        <li style="margin-bottom: 8px">
+          <code style="background-color: #f8d7da; color: #721c24; padding: 4px 8px">{{ log.message }}</code> at
+          <!-- another weird comment bc formatter >:( -->
+          {{ log.timestamp|human_readable_datetime }}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% else %}
+    <p
+      style="
+        color: #155724;
+        font-weight: 600;
+        background-color: #d4edda;
+        padding: 12px;
+        border: 2px solid #155724;
+        border-radius: 4px;
+        display: inline-block;
+      "
+    >
+      no errors in the log
+    </p>
+    {% endif %}
+  </body>
+  <script>
+    document.getElementById("toggle_{{ automation.id }}").checked = {{ automation.enabled|yesno:"true,false" }};
+    function toggleAutomation() {
+      const checkbox = document.getElementById("toggle_{{ automation.id }}");
+      const isChecked = checkbox.checked;
+      const url = isChecked
+        ? "{% url 'enable_automation' automation.id %}"
+        : "{% url 'disable_automation' automation.id %}";
+
+      fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": "{{ csrf_token }}",
+        },
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Network response was not ok");
+          }
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+          // revert the checkbox state on error so it reflects the actual state of the automation
+          checkbox.checked = !isChecked;
+        });
+    }
+  </script>
+</html>

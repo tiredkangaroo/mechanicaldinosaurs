@@ -11,11 +11,28 @@ var automations = []*Automation{}
 
 type Automation struct {
 	// automation consists of trigger, conditions, and actions
-	ID        string
-	Enabled   bool
-	Trigger   Trigger
-	Condition *Condition
-	Action    Action
+	ID             string
+	Enabled        bool
+	Trigger        Trigger
+	Condition      *Condition
+	Action         Action
+	LastTriggered  time.Time
+	LastActionDone time.Time
+	ErrorLogs      []Error // any error that occurred during the last trigger or action execution
+
+	actionDoneOnLastTrigger bool // used to prevent action from being done multiple times in a row, should include exception for interval trigger ofc
+}
+
+type Error struct {
+	Message   string    `json:"message"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+func NewError(message string) Error {
+	return Error{
+		Message:   message,
+		Timestamp: time.Now(),
+	}
 }
 
 func (a *Automation) String() string {
@@ -31,7 +48,10 @@ func (a *Automation) String() string {
 }
 
 func (a *Automation) OnTriggered(c Context) {
+	defer pushToSave() // things probably changed (like last triggered, last action done, error logs, etc.), so we should save the automations to file
+
 	slog.Info("automation triggered", "automation_id", a.ID)
+	a.LastTriggered = time.Now()
 
 	var v bool = true
 	var err error
@@ -39,14 +59,28 @@ func (a *Automation) OnTriggered(c Context) {
 	if a.Condition != nil {
 		v, err = a.Condition.Evaluate(c)
 		if err != nil {
+			a.ErrorLogs = append(a.ErrorLogs, NewError(fmt.Sprintf("failed to evaluate condition: %v", err)))
 			slog.Error("failed to evaluate condition", "automation_id", a.ID, "error", err)
 		}
 		slog.Info("automation condition evaluated", "automation_id", a.ID, "result", v)
 	}
 	if v { // if condition is met (or no condition), then do action
+		if a.actionDoneOnLastTrigger && a.Trigger.Type() != "interval" {
+			slog.Info("automation action already done on last trigger, skipping", "automation_id", a.ID)
+			return
+		}
+		a.LastActionDone = time.Now()
 		err = a.Action.Do(c)
-		slog.Info("automation action executed", "automation_id", a.ID, "error", err)
+		if err != nil {
+			a.ErrorLogs = append(a.ErrorLogs, NewError(fmt.Sprintf("failed to execute action: %v", err)))
+			slog.Error("failed to execute action", "automation_id", a.ID, "error", err)
+		} else {
+			slog.Info("automation action executed", "automation_id", a.ID)
+		}
 	}
+	a.actionDoneOnLastTrigger = v
+	// if the action was done, or was skipped because the action was done on the last trigger, then we should mark that the action was done on this trigger, so that we don't do it again on the next trigger
+	// however, if the condition evaluated to false, then we should mark that the action was not done on this trigger, so that we can do it again on the next trigger if the condition is met
 }
 
 func (a *Automation) Enable() error {
@@ -94,11 +128,14 @@ func (a *Automation) UnmarshalJSON(data []byte) error {
 
 // version of automation that can be communicated (via json)
 type AutomationCommunicable struct {
-	ID        string              `json:"id"`
-	Enabled   bool                `json:"enabled"`
-	Trigger   TriggerCommunicable `json:"trigger"`
-	Condition *Condition          `json:"condition,omitempty"`
-	Action    ActionCommunicable  `json:"action"`
+	ID             string              `json:"id"`
+	Enabled        bool                `json:"enabled"`
+	Trigger        TriggerCommunicable `json:"trigger"`
+	Condition      *Condition          `json:"condition,omitempty"`
+	Action         ActionCommunicable  `json:"action"`
+	LastTriggered  time.Time           `json:"last_triggered"`   // last time the trigger went off
+	LastActionDone time.Time           `json:"last_action_done"` // last time action.Do was called
+	ErrorLogs      []Error             `json:"error_logs,omitempty"`
 }
 
 func (a *Automation) ToCommunicable() *AutomationCommunicable {
@@ -112,6 +149,9 @@ func (a *Automation) ToCommunicable() *AutomationCommunicable {
 		Action: ActionCommunicable{
 			Type: a.Action.Type(),
 		},
+		LastTriggered:  a.LastTriggered,
+		LastActionDone: a.LastActionDone,
+		ErrorLogs:      a.ErrorLogs,
 	}
 
 	switch triggerTyped := a.Trigger.(type) {
@@ -154,11 +194,14 @@ func (ac *AutomationCommunicable) ToAutomation() (*Automation, error) {
 	}
 
 	return &Automation{
-		ID:        ac.ID,
-		Enabled:   ac.Enabled,
-		Trigger:   trigger,
-		Condition: ac.Condition,
-		Action:    action,
+		ID:             ac.ID,
+		Enabled:        ac.Enabled,
+		Trigger:        trigger,
+		Condition:      ac.Condition,
+		Action:         action,
+		LastTriggered:  ac.LastTriggered,
+		LastActionDone: ac.LastActionDone,
+		ErrorLogs:      ac.ErrorLogs,
 	}, nil
 }
 
