@@ -59,7 +59,7 @@ func (a *Automation) OnTriggered(c Context) {
 	if a.Condition != nil {
 		v, err = a.Condition.Evaluate(c)
 		if err != nil {
-			a.ErrorLogs = append(a.ErrorLogs, NewError(fmt.Sprintf("failed to evaluate condition: %v", err)))
+			a.ErrorLogs = append(a.ErrorLogs, NewError(fmt.Sprintf("evaluate condition: %v", err)))
 			slog.Error("failed to evaluate condition", "automation_id", a.ID, "error", err)
 		}
 		slog.Info("automation condition evaluated", "automation_id", a.ID, "result", v)

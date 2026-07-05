@@ -1,5 +1,15 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+/* @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap'); */
 @import url('https://fonts.googleapis.com/css2?family=Merriweather:ital,opsz,wght@0,18..144,300..900;1,18..144,300..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+
+:root {
+    --primary-color: #9c540c;
+    --secondary-color: #f5e4ba;
+    --danger-color: #9c160c;
+    --md-green: #65fd8d;
+    --md-red: var(--danger-color);
+    --md-blue: #081c9e;
+    --md-gray: #d2d2d2;
+}
 
 html, body {
     font-family: 'Merriweather', serif;
@@ -11,7 +21,7 @@ h1, h2, h3, h4, h5, h6, b {
 }
 
 button {
-    background-color: #6d5000;
+    background-color: var(--primary-color);
     color: white;
     border: 0px;
     cursor: pointer;
@@ -20,10 +30,10 @@ button {
 }
 .error-flash {
     background-color: #ffcfcc;
-    color: #ff0000;
+    color: var(--danger-color);
     padding: 6px 12px;
     border-radius: 5px;
-    border: 2px solid #ff0000;
+    border: 2px solid var(--danger-color);
     margin-top: 10px;
     margin-bottom: 10px;
 }
@@ -32,17 +42,20 @@ button {
 }
 
 .status-running, .status-Running, .status-healthy, .status-reachable {
-    background-color: green;
+    background-color: var(--md-green);
 }
 
 .status-Succeeded {
-    background-color: blue;
+    background-color: var(--md-blue);
 }
 
 .status-stopped, .status-exited {
-    background-color: gray;
+    background-color: var(--md-gray);
 }
 
 .status-critical, .status-unreachable {
-    background-color: red;
+    background-color: var(--danger-color);
+}
+.button-dangerous {
+    background-color: var(--danger-color) !important;
 }

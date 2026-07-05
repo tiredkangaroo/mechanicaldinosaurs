@@ -11,7 +11,7 @@
       .vms,
       .deployments,
       .automations {
-        background-color: #f7e9c1;
+        background-color: var(--secondary-color);
         padding: 20px;
       }
       .machines-title,
@@ -98,7 +98,9 @@
         padding-right: 0.9rem;
       }
       .automation-card {
-        background-color: #f0f0f0;
+        background-color: var(--primary-color);
+        color: var(--secondary-color);
+        border-radius: 8px;
         padding: 16px 24px;
         display: flex;
         flex-direction: column;
@@ -117,7 +119,7 @@
         margin-right: 10px;
       }
       .automation-text {
-        color: #333;
+        color: var(--secondary-color);
       }
     </style>
   </head>
@@ -127,16 +129,11 @@
       <div style="display: flex; flex-direction: column; justify-content: center; align-items: end; gap: 10px">
         <a href="{% url 'passkeys_mgmt' %}">
           <button>
-            <img
-              src="{% static 'passkeys/imgs/FIDO-Passkey_Icon-White.png' %}"
-              alt="passkey icon"
-              style="width: 20px; height: 20px; vertical-align: middle; margin-right: 5px"
-            />
             manage passkeys
           </button>
         </a>
         <a href="{% url 'logout' %}" style="text-decoration: none; color: inherit; margin: 0">
-          <button style="background-color: red">logout</button>
+          <button class="button-dangerous">logout</button>
         </a>
       </div>
     </div>
@@ -169,7 +166,8 @@
             <div
               style="
                 padding: 8px 24px;
-                background-color: #f0f0f0;
+                background-color: var(--primary-color);
+                color: var(--secondary-color);
                 display: flex;
                 flex-direction: column;
                 align-items: center;
@@ -177,14 +175,14 @@
               "
             >
               <h2 style="margin-bottom: 0">{{ machine.name }}</h2>
-              <p style="color: gray; margin-top: 4px">{{ machine.hostport }}</p>
+              <p style="color: var(--md-gray); margin-top: 4px">{{ machine.hostport }}</p>
               <div style="display: flex; justify-content: center; align-items: center; gap: 6px">
                 <div class="status-indicator status-{{ machine.status|lower }}"></div>
                 {{ machine.status }}
               </div>
               <form method="POST" action="{% url 'machine_delete' machine.name %}">
                 {% csrf_token %}
-                <button style="background-color: #a30000; color: white; padding: 4px 8px; border-radius: 4px">
+                <button class="button-dangerous">
                   delete
                 </button>
               </form>
@@ -207,7 +205,8 @@
             <div
               style="
                 padding: 8px 24px;
-                background-color: #f0f0f0;
+                background-color: var(--primary-color);
+                color: var(--secondary-color);
                 display: flex;
                 flex-direction: column;
                 align-items: center;
@@ -215,7 +214,7 @@
               "
             >
               <h2 style="margin-bottom: 0">{{ vm.config.name }}</h2>
-              <p style="color: gray; margin-top: 4px">{{ vm.machine.name }}</p>
+              <p style="color: var(--md-gray); margin-top: 4px">{{ vm.machine.name }}</p>
               <div style="display: flex; justify-content: center; align-items: center; gap: 6px">
                 <div class="status-indicator status-{{ vm.status|lower }}"></div>
                 {{ vm.status }}
@@ -244,7 +243,8 @@
             <div
               style="
                 padding: 8px 24px;
-                background-color: #f0f0f0;
+                background-color: var(--primary-color);
+                color: var(--secondary-color);
                 display: flex;
                 flex-direction: column;
                 align-items: center;
@@ -252,7 +252,7 @@
               "
             >
               <h2 style="margin-bottom: 0">{{ deployment.display_name }}</h2>
-              <p style="color: gray; margin-top: 4px">{{ deployment.namespace }}</p>
+              <p style="color: var(--md-gray); margin-top: 4px">{{ deployment.namespace }}</p>
               <div style="display: flex; justify-content: center; align-items: center; gap: 6px">
                 <div class="status-indicator status-{{ deployment.status|lower }}"></div>
                 {{ deployment.status }}
@@ -278,22 +278,22 @@
           {% for automation in automations %}
           <a href="{% url 'automation_detail' automation.id %}" style="text-decoration: none; color: inherit">
             <div class="automation-card">
-              <p style="margin-top: 0; margin-bottom: 0; font-size: 0.85rem; color: gray">
-                {{ automation.id }} <span style="font-weight: 800; color: {{ automation.enabled|yesno:"green,red" }}">{{ automation.enabled|yesno:"enabled,disabled" }}</span>
+              <p style="margin-top: 0; margin-bottom: 0; font-size: 0.85rem; color: var(--md-gray);">
+                {{ automation.id }} <span style="font-weight: 800; color: var(--md-{{ automation.enabled|yesno:"green,red" }});">{{ automation.enabled|yesno:"enabled,disabled" }}</span>
               </p>
               <div style="display: flex; flex-direction: column; gap: 2.5rem">
                 <div class="automation-step">
-                  <span class="automation-badge" style="color: #0c5460">Trigger</span>
+                  <span class="automation-badge" style="color: #1db9d4">Trigger</span>
                   <span class="automation-text">{{ automation.trigger.name }}</span>
                 </div>
 
                 <div class="automation-step">
-                  <span class="automation-badge" style="color: #856404">Condition</span>
+                  <span class="automation-badge" style="color: #dca708">Condition</span>
                   <span class="automation-text">{{ automation.condition.name }}</span>
                 </div>
 
                 <div class="automation-step">
-                  <span class="automation-badge" style="color: #155724">Action</span>
+                  <span class="automation-badge" style="color: #32cb56">Action</span>
                   <span class="automation-text">{{ automation.action.name }}</span>
                 </div>
               </div>
