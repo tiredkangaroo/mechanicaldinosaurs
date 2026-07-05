@@ -41,7 +41,7 @@ def index(request):
                 print(f"error fetching vms for machine {machine.name}: {str(e)}")
                 machine.status = "unreachable"
     
-    deployments = []
+    deployments_by_namespace = {}
     try:
         deployments_list = k3.kube_app_api.list_deployment_for_all_namespaces(watch=False)
         
@@ -69,7 +69,10 @@ def index(request):
             else:
                 status = "Unknown"
 
-            deployments.append({
+
+            if deploy.metadata.namespace not in deployments_by_namespace:
+                deployments_by_namespace[deploy.metadata.namespace] = []
+            deployments_by_namespace[deploy.metadata.namespace].append({
                 "name": deploy.metadata.name,
                 "display_name": deploy.metadata.name.replace("-deployment", ""),
                 "namespace": deploy.metadata.namespace,
@@ -82,8 +85,9 @@ def index(request):
     except ApiException as e:
         print(f"error fetching deployments from cluster: {str(e)}")
 
-    # sort by namespace and then by status (crititcal > scaling > healthy) and then by created at
-    deployments.sort(key=lambda x: (x['namespace'], x['status'], x['created_at']))
+    # sort by status (crititcal > scaling > healthy) and then by created at for each namespace
+    for namespace, deploys in deployments_by_namespace.items():
+        deploys.sort(key=lambda x: (x['status'], x['created_at']))
 
     automations = []
     try:
@@ -113,4 +117,4 @@ def index(request):
         if automation["action"]["type"] == "email":
             automation["action"]["name"] = mark_safe(f"<b>send email to</b> {automation['action']['email']['to']}")
 
-    return render(request, 'index.html', {'machines': machines, 'vms': vms, 'deployments': deployments, 'automations': automations})
+    return render(request, 'index.html', {'machines': machines, 'vms': vms, 'deployments_by_ns': deployments_by_namespace, 'automations': automations})
