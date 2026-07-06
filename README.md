@@ -41,6 +41,8 @@ get the windows virtio drivers here: https://fedorapeople.org/groups/virt/virtio
 
 to do list:
 
+- add updating vms
+- make the ui actually look good
 - secure connections (using custom certs?) from machines
 - add dns & cloudflare tunnel stuff
 

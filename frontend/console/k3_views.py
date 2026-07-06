@@ -185,9 +185,13 @@ def deployment_detail(request, namespace, deployment_name):
 
                 containers.append({
                     "name": c.name,
+                    "command": c.command,
                     "image": c.image,
-                    "ports": [p.container_port for p in c.ports] if c.ports else [],
+                    "ports": c.ports,
+                    "env_from": c.env_from,
                     "env": env_map,
+                    "image_pull_policy": c.image_pull_policy,
+                    "restart_policy": c.restart_policy,
                     "resources": {
                         "requests": reqs,
                         "limits": limits

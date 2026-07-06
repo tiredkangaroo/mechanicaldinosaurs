@@ -115,7 +115,6 @@
         margin-bottom: 40px;
         padding-bottom: 20px;
         border: 4px solid black;
-        /* border-color: #c3c3c3; */
         padding: 10px;
       }
     </style>
@@ -154,23 +153,10 @@
     </div>
 
     {% if service_ports %}
-    <h2>Exposed Ports</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>internal port</th>
-          <th>exposed port</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for port in service_ports %}
-        <tr>
-          <td>{{ port.target_port }}</td>
-          <td>{{ port.port }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <h2 style="margin-bottom: 0;">exposed ports</h2>
+    {% for port in service_ports %}
+    <p style="margin: 0px 0px 8px 0px;">- <b>container port</b> {{ port.target_port }} <b>forwarded to</b> {{ port.port }}</p>
+    {% endfor %}
     {% endif %}
 
     {% if deployment.labels %}
@@ -185,60 +171,72 @@
     </table>
     {% endif %}
 
-    <h2>Containers</h2>
+    <h2>containers 📦</h2>
     {% for container in containers %}
     <div class="container-block">
-      <h3 style="margin-top: 0">{{ container.name }}</h3>
-      <table>
-        <tr>
-          <th>Image</th>
-          <td><code>{{ container.image }}</code></td>
-        </tr>
-        {% if container.ports %}
-        <tr>
-          <th>Ports</th>
-          <td>{{ container.ports|join:", " }}</td>
-        </tr>
+      <h3 style="margin-top: 0; margin-bottom: 0px;">
+        {{ container.name }}
+      </h3>
+      
+      <h4>restart policy</h4>
+      <p>
+        {{ container.restart_policy }}:  
+        {% if container.restart_policy == 'Always' %}
+        on exit, container will restart
+        {% elif container.restart_policy == 'OnFailure' %}
+        on exit, container will restart only if previous exit code was non-zero (failure)
+        {% else %}
+        on exit, container will not restart
         {% endif %}
-      </table>
+      </p>
 
-      {% if container.resources.requests or container.resources.limits %}
-      <h4>Resource Declarations</h4>
-      <table>
-        {% if container.resources.requests %}
-        <tr>
-          <th>Requests</th>
-          <td>
-            <div style="margin: 0; display: flex; flex-direction: column; gap: 6px">
-              {% for k, v in container.resources.requests.items %}
-              <p style="margin: 0"><b>{{ k }}:</b> {{ v }}</p>
-              {% endfor %}
-            </div>
-          </td>
-        </tr>
-        {% endif %} {% if container.resources.limits %}
-        <tr>
-          <th>Limits</th>
-          <td>
-            <div style="margin: 0; display: flex; flex-direction: column; gap: 6px">
-              {% for k, v in container.resources.limits.items %}
-              <p style="margin: 0"><b>{{ k }}:</b> {{ v }}</p>
-              {% endfor %}
-            </div>
-          </td>
-        </tr>
-        {% endif %}
-      </table>
+      <h4>image (pull policy: <span title="{% if container.image_pull_policy == 'IfNotPresent' %}only pulls image from remote if it's not present locally{% elif container.image_pull_policy == 'Always' %}always pulls image from remote{% else %}never pulls image from remote{% endif %}">{{ container.image_pull_policy }}</span>)</h4>
+      <code>
+        {{ container.image }}
+      </code>
+
+      {% if container.command %}
+      <h4>command</h4>
+      <code>
+        {{ container.command }}
+      </code>
       {% endif %}
 
-      <p>
-        <b>Environment Variables:</b>
+      {% if container.ports %}
+      <h4>ports</h4>
+      {% for port in container.ports %}
+      {% if port.name %}
+      <p style="margin: 0;">- <b>{{ port.name }}: </b>{{ port.container_port }}/{{ port.protocol }}</p>
+      {% else %}
+      <p style="margin: 0;">- {{ port.container_port }}/{{ port.protocol }}</p>
+      {% endif %}
+      {% endfor %}
+      {% endif %}
+
+      
+      {% if container.resources.requests or container.resources.limits %}
+      <h4>resource requests</h4>
+        {% if container.resources.requests %}
+        {% for k, v in container.resources.requests.items %}
+        <p style="margin: 0;"><b>{{ k }}: </b>{{ v }}</p>
+        {% endfor %}
+        {% endif %}
+        {% if container.resources.limits %}
+        <h4>resource limits</h4>
+        {% for k, v in container.resources.limits.items %}
+        <p style="margin: 0;"><b>{{ k }}: </b>{{ v }}</p>
+        {% endfor %}
+        {% endif %}
+      {% endif %}
+
+      <div style="display: flex; flex-direction: row; align-items: center; gap: 6px; margin-top: 15px;">
+        <h4 style="margin: 0;">environment variables:</h4>
         {% if container.env %}
         <button onclick="toggleSection('env-{{ forloop.counter }}', this)">show</button>
         {% else %} none {% endif %}
-      </p>
+      </div>
       {% if container.env %}
-      <div id="env-{{ forloop.counter }}" style="display: none">
+      <div id="env-{{ forloop.counter }}" style="display: none; margin-top: 6px;">
         <table>
           {% for var, val in container.env.items %}
           <tr>
@@ -283,7 +281,7 @@
     <h2>logs</h2>
     {% for pod in pods %}
     <div style="padding: 5px 20px; border: 4px solid #000; margin-bottom: 20px;">
-      <h3>{{ pod.name }}</h3>
+      <h3>pod {{ pod.name }}</h3>
       <iframe src="{% url 'pod_logs' deployment.namespace pod.name %}" style="width: 100%; height: 400px; border: 1px solid #ccc; border-radius: 4px;"></iframe>
     </div>
     {% endfor %}

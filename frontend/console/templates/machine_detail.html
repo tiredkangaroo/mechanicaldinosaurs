@@ -92,9 +92,6 @@
         margin-top: 0;
         margin-bottom: 12px;
         font-size: 1.1rem;
-        display: flex;
-        align-items: center;
-        gap: 10px;
       }
       .container-card h3 a,
       .vm-card h3 a {
@@ -104,16 +101,28 @@
     </style>
   </head>
   <body>
-    <h1 id="machine-name">{{machine.name}} ({{machine.hostport}})</h1>
+    <h1
+      id="machine-name"
+      style="
+        background-color: var(--secondary-color);
+        width: fit-content;
+        text-align: center;
+        margin-left: auto;
+        margin-right: auto;
+        padding: 8px 22px;
+      "
+    >
+      {{machine.name}} ({{machine.hostport}})
+    </h1>
 
     {% if machine.vm_status.error %}
     <div class="error-flash">
       <h2>an error occurred getting VM status</h2>
       <p>{{machine.vm_status.error}}</p>
     </div>
-    {% else %}
-    <p class="status-text">vm status: {{machine.vm_status}}</p>
-    {% endif %} {% if machine.info.error %}
+    {% endif %}
+    <!--  -->
+    {% if machine.info.error %}
     <div class="error-flash">
       <h2>an error occurred getting machine info</h2>
       <p>{{machine.info.error}}</p>
@@ -181,7 +190,7 @@
       {% for item in machine.vms %}
       <div class="vm-card">
         <h3>
-          {{ item.config.name }} ({{ item.status}})
+          {{ item.config.name }} <span class="status-{{ item.status }}-color">({{ item.status }})</span>
           <a href="{% url 'vm_detail' machine_name=machine.name vm_name=item.config.name %}">view</a>
         </h3>
         <div class="vm-details" style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px">

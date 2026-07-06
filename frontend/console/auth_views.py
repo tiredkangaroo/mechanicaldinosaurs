@@ -14,6 +14,8 @@ import resend
 from django.views.decorators.clickjacking import xframe_options_exempt
 
 def login_view(request):
+    if request.user.is_authenticated:
+        return redirect('index')
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')

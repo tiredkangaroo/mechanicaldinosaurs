@@ -54,10 +54,14 @@ button {
 .status-stopped, .status-exited {
     background-color: var(--md-gray);
 }
+.status-stopped-color, .status-exited-color {
+    color: var(--md-gray);
+}
 
 .status-critical, .status-unreachable {
     background-color: var(--danger-color);
 }
+
 .button-dangerous {
     background-color: var(--danger-color) !important;
 }

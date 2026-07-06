@@ -12,6 +12,7 @@
         flex-direction: row;
         align-items: center;
         gap: 6px;
+        padding: 6px 12px;
       }
       #loginForm {
         display: flex;
@@ -27,27 +28,32 @@
     </style>
   </head>
   <body>
-    <h1>login</h1>
-    {% if error %}
-    <div class="error-flash">
-      <p>{{ error }}</p>
+    <body style="width: 75%; margin: auto; padding-top: 20px; padding-bottom: 20px">
+    <div style="display: flex; flex-direction: row; align-items: center; justify-content: space-between; padding: 20px; border-bottom: 4px solid #ddd">
+      <h1>mechanical dinosaurs 🦕</h1>
     </div>
-    {% endif %}
-    <form id="loginForm" method="POST" action="{% url 'login' %}">
-      {% csrf_token %}
-      <input type="text" name="username" placeholder="Username" required />
-      <input type="password" name="password" placeholder="Password" required />
-      {% if request.GET.next %}
-      <input type="hidden" name="next" value="{{ request.GET.next }}" />
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
+      <h1>login</h1>
+      {% if error %}
+      <div class="error-flash">
+        <p>{{ error }}</p>
+      </div>
       {% endif %}
-      <input type="hidden" name="passkeys" id="passkeys" />
-      <button type="submit">Login</button>
-    </form>
-    <br />
-    <button id="passkeyButton" type="button" onclick="authn('loginForm')">
-      <img src="{% static 'passkeys/imgs/FIDO-Passkey_Icon-White.png' %}" style="width: 24px" /> &nbsp;Login with
-      Passkey
-    </button>
+      <form id="loginForm" method="POST" action="{% url 'login' %}">
+        {% csrf_token %}
+        <input type="text" name="username" placeholder="Username" required />
+        <input type="password" name="password" placeholder="Password" required />
+        {% if request.GET.next %}
+        <input type="hidden" name="next" value="{{ request.GET.next }}" />
+        {% endif %}
+        <input type="hidden" name="passkeys" id="passkeys" />
+        <button type="submit">Login</button>
+      </form>
+      <br />
+      <button id="passkeyButton" type="button" onclick="authn('loginForm')">
+        login with passkey
+      </button>
+    </div>
     {%include 'passkeys/passkeys.js' with allow_password=True %}
     <script>
       function no_credentials_found() {
