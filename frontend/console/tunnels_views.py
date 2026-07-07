@@ -3,6 +3,7 @@ from os import environ, path
 from .models import Machine, Deployment
 import requests
 from . import k3
+from urllib.parse import urlparse
 
 # needs tunnel:read and tunnel:edit
 cloudflare_account_id = environ.get("CLOUDFLARE_ACCOUNT_ID")
@@ -14,15 +15,15 @@ def tunnels(request):
 
     tunnel_ids = []
     try:
-        resp = requests.get("https://api.cloudflare.com/client/v4/accounts/{cloudflare_account_id}/tunnels", headers={
+        resp = requests.get(f"https://api.cloudflare.com/client/v4/accounts/{cloudflare_account_id}/tunnels", headers={
             "Authorization": f"Bearer {cloudflare_api_token}",
             "Content-Type": "application/json"
         })
         data = resp.json()
         if resp.status_code != 200:
-            return HttpResponse(f"error fetching tunnels: {data.errors}", status=500)
+            return HttpResponse(f"error fetching tunnels: {data.get('errors', ['Unknown error'])}", status=500)
         if not data.get("success"):
-            return HttpResponse(f"error fetching tunnels: {data.errors}", status=500)
+            return HttpResponse(f"error fetching tunnels: {data.get('errors', ['Unknown error'])}", status=500)
         tunnel_ids = [tunnel["id"] for tunnel in data.get("result", [])]
     except Exception as e:
         return HttpResponse(f"error fetching tunnels: {str(e)}", status=500)
@@ -30,42 +31,48 @@ def tunnels(request):
     tunnel_tokens = {} # tunnel token -> tunnel id
     tunnel_ingress = {} # tunnel id -> list of ingress rules
     for tunnel_id in tunnel_ids:
-        resp = requests.get("https://api.cloudflare.com/client/v4/accounts/{cloudflare_account_id}/cfd_tunnel/{tunnel_id}/configurations", headers={
+        resp = requests.get(f"https://api.cloudflare.com/client/v4/accounts/{cloudflare_account_id}/cfd_tunnel/{tunnel_id}/configurations", headers={
             "Authorization": f"Bearer {cloudflare_api_token}",
             "Content-Type": "application/json"
         })
         data = resp.json()
-        if resp.status_code != 200:
-            return HttpResponse(f"error fetching tunnel configuration for {tunnel_id}: {data.errors}", status=500)
-        if not data.get("success"):
-            return HttpResponse(f"error fetching tunnel configuration for {tunnel_id}: {data.errors}", status=500)
-        result = data.get("result", {})
-        tunnel_ingress[tunnel_id] = result.get("ingress", [])
+        match resp.status_code:
+            case 200:
+                result = data.get("result", {})
+                config = result.get("config", {})
+                tunnel_ingress[tunnel_id] = config.get("ingress", [])
+            case 404:
+                # configuration not found (not configured yet)
+                pass
+            case _:
+                return HttpResponse(f"error fetching tunnel configuration for {tunnel_id}: {data.get('errors', ['Unknown error'])}", status=500)
 
-        resp = requests.get("https://api.cloudflare.com/client/v4/accounts/{cloudflare_account_id}/cfd_tunnel/{tunnel_id}/token", headers={
+        resp = requests.get(f"https://api.cloudflare.com/client/v4/accounts/{cloudflare_account_id}/cfd_tunnel/{tunnel_id}/token", headers={
             "Authorization": f"Bearer {cloudflare_api_token}",
             "Content-Type": "application/json"
         })
         data = resp.json()
-        if resp.status_code != 200:
-            return HttpResponse(f"error fetching tunnel token for {tunnel_id}: {data.errors}", status=500)
-        if not data.get("success"):
-            return HttpResponse(f"error fetching tunnel token for {tunnel_id}: {data.errors}", status=500)
-        result = data.get("result", "")
-        tunnel_tokens[result] = tunnel_id
+        match resp.status_code:
+            case 200:
+                result = data.get("result", "")
+                tunnel_tokens[result] = tunnel_id
+            case _:
+                return HttpResponse(f"error fetching tunnel token for {tunnel_id}: {data.get('errors', ['Unknown error'])}", status=500)
 
     machines = Machine.objects.all()
     machine_tunnels = {} # machine name -> list of tunnel ids
     for machine in machines:
         # get a machine's tunnel ids/tokens
-        resp = requests.get(f"http://{machine.hostport}/api/tunnels/ids-and-tokens").json()
-        for idOrToken in resp:
+        resp = requests.get(f"http://{machine.hostport}/api/tunnels/ids-and-tokens", headers={"Authorization": f"Bearer {machine.secret_key}"})
+        if resp.status_code != 200:
+            continue # just skip
+        for idOrToken in resp.json():
             # get the tunnel id (if it's a token, we need to look it up in the tunnel_tokens dict)
             tunnel_id = None
-            if idOrToken["type"] == "id":
+            if idOrToken.get("type") == "id":
                 tunnel_id = idOrToken["value"]
-            elif idOrToken["type"] == "token":
-                tunnel_id = tunnel_tokens.get(idOrToken["value"])
+            elif idOrToken.get("type") == "token":
+                tunnel_id = tunnel_tokens.get(idOrToken["value"].strip())
 
             if not tunnel_id:
                 # note: potentially sensitive info being logged
@@ -91,17 +98,25 @@ def tunnels(request):
     for machine in machines:
         port_service_map = {}
 
-        resp = requests.get(f"http://{machine.hostport}/api/ports-services")
+        resp = requests.get(f"http://{machine.hostport}/api/ports-services", headers={"Authorization": f"Bearer {machine.secret_key}"})
         if resp.status_code != 200:
             return HttpResponse(f"error fetching ports-services for machine {machine.name}: {resp.text}", status=500)
         else:
-            port_service_map = resp.json() # map of port -> service name
+            for port, service in resp.json().items():
+                port_service_map[int(port)] = {
+                    "name": service,
+                    "k3_deployment_name": None,
+                    "k3_namespace": None,
+                    "k3_service_name": None,
+                    "ingress_rule": None, # filled in later
+                }
         
 
         # see if this machine is the k3 machine (and also let these ports override)
-        host, port = machine.hostport.split(":")
-        if host == k3.kube_core_api.api_client.configuration.host: # this is the k3 control node
-            for svc in kube_core_api.list_service_for_all_namespaces(watch=False).items:
+        machine_host, _ = machine.hostport.split(":")
+        k3_host = urlparse(k3.kube_core_api.api_client.configuration.host).hostname
+        if machine_host == k3_host: # this is the k3 control node
+            for svc in k3.kube_core_api.list_service_for_all_namespaces(watch=False).items:
                 for svc_port in svc.spec.ports:
                     k3_deployment_name = None
                     try:
@@ -113,29 +128,52 @@ def tunnels(request):
                     obj = {
                         "name": svc.metadata.name,
                         "k3_deployment_name": k3_deployment_name,
+                        "k3_namespace": svc.metadata.namespace,
                         "k3_service_name": svc.metadata.name,
                         "ingress_rule": None, # filled in later
+                        "ingress_type": None, # also filled in later
                     }
                     # there's a node port and the port from service spec which are different but both are valid ways to access the service
                     # note: research why that is later and what the difference is
-                    port_service_map[svc_port.node_port] = obj
-                    port_service_map[svc_port.port] = obj
+                    if svc_port.node_port:
+                        port_service_map[svc_port.node_port] = obj
+                    if svc_port.port:
+                        port_service_map[svc_port.port] = obj
+        else:
+            pass
 
         # fill in ingress rule for all services if they exist
         ingress_rules = machine_tunnel_ingress.get(machine.name, [])
         for ingress_rule in ingress_rules:
             service = ingress_rule.get("service")
-            port = urlparse(service).port
+            service_parse = urlparse(service)
+            
+            port = service_parse.port
             if port in port_service_map:
-                port_service_map[port]["ingress_rule"] = ingress_rule   
-
-        
+                port_service_map[port]["ingress_rule"] = ingress_rule
+                port_service_map[port]["ingress_type"] = service_parse.scheme # http, https, tcp, etc.
+            elif port is not None:
+                port_service_map[port] = {
+                    "name": "unknown",
+                    "k3_deployment_name": None,
+                    "k3_namespace": None,
+                    "k3_service_name": None,
+                    "ingress_rule": ingress_rule,
+                    "ingress_type": service_parse.scheme,
+                }
         
         machine_exposed_port_services[machine.name] = port_service_map
+    
 
-    print(f"machine_exposed_port_services: {machine_exposed_port_services}")
+    # print(f"machine_exposed_port_services: {machine_exposed_port_services}")
+
+    # sort each machine's port_service_map by port number
+    for machine_name, port_service_map in machine_exposed_port_services.items():
+        machine_exposed_port_services[machine_name] = dict(sorted(port_service_map.items(), key=lambda item: item[0]))
+
     return render(request, "tunnels.html", {
         "machine_exposed_port_services": machine_exposed_port_services,
+        "machine_tunnels": machine_tunnels,
     })    
 
 

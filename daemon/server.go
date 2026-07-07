@@ -53,7 +53,6 @@ func main() {
 
 			// skip placeholders
 			if conn.Pid <= 0 {
-				fmt.Printf("%-10s %-10d %-10s %s\n", proto, port, "-", "Unknown (System/Permission)")
 				continue
 			}
 
