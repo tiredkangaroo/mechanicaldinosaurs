@@ -178,18 +178,6 @@
         {{ container.name }}
       </h3>
       
-      <h4>restart policy</h4>
-      <p>
-        {{ container.restart_policy }}:  
-        {% if container.restart_policy == 'Always' %}
-        on exit, container will restart
-        {% elif container.restart_policy == 'OnFailure' %}
-        on exit, container will restart only if previous exit code was non-zero (failure)
-        {% else %}
-        on exit, container will not restart
-        {% endif %}
-      </p>
-
       <h4>image (pull policy: <span title="{% if container.image_pull_policy == 'IfNotPresent' %}only pulls image from remote if it's not present locally{% elif container.image_pull_policy == 'Always' %}always pulls image from remote{% else %}never pulls image from remote{% endif %}">{{ container.image_pull_policy }}</span>)</h4>
       <code>
         {{ container.image }}
@@ -229,6 +217,13 @@
         {% endif %}
       {% endif %}
 
+      {% if container.volume_mounts %}
+      <h4>volume mounts</h4>
+      {% for mount in container.volume_mounts %}
+      <p style="margin: 0;">- <b>{{ mount.mount_path }}</b> ({{ mount.name }}, {{ mount.read_only|yesno:"read-only,read-write" }})</p>
+      {% endfor %}
+      {% endif %}
+
       <div style="display: flex; flex-direction: row; align-items: center; gap: 6px; margin-top: 15px;">
         <h4 style="margin: 0;">environment variables:</h4>
         {% if container.env %}
@@ -252,28 +247,37 @@
 
     <h2>Active Replica Pods</h2>
     {% if pods %}
-    <table>
-      <thead>
-        <tr>
-          <th>Pod Name</th>
-          <th>Status</th>
-          <th>Pod IP</th>
-          <th>Node</th>
-          <th>Restarts</th>
-        </tr>
-      </thead>
-      <tbody>
+    <div style="display: flex; flex-direction: row; gap: 10px;">
         {% for pod in pods %}
-        <tr>
-          <td><code>{{ pod.name }}</code></td>
-          <td>{{ pod.status }}</td>
-          <td>{{ pod.ip|default:"—" }}</td>
-          <td>{{ pod.node|default:"—" }}</td>
-          <td>{{ pod.restarts }}</td>
-        </tr>
+        <div style="background-color: var(--secondary-color); padding: 18px 24px;">
+          <div style="display: flex; flex-direction: row; align-items: center; gap: 6px;">
+            <h2 style="margin: 0; color: var(--primary-color);">pod <code>{{ pod.name }}</code></h2>
+            <div class="status-indicator status-{{ pod.status|lower }}" title="{{ pod.status }}"></div>
+          </div>
+          <div style="margin-left: 8px; margin-top: 4px; display: flex; flex-direction: column; gap: 9px">
+            <p style="margin: 0;"><b>created at:</b> {{ pod.created_at }} UTC</p>
+            <p style="margin: 0;"><b>restarts:</b> {{ pod.restarts }}</p>
+            <p style="margin: 0;"><b>ip:</b> {{ pod.ip }}</p>
+            <p style="margin: 0;"><b>node:</b> {{ pod.node }}</p>
+            {% if pod.volumes %}
+            <p style="margin: 12px 0px 0px 0px;"><b>volumes:</b></p>
+            <ul style="margin: 0; padding-left: 20px;">
+              {% for volume in pod.volumes %}
+              <li>
+                <b>{{ volume.name }}</b>
+                {% if volume.persistent_volume_claim %}
+                (pvc: {{ volume.persistent_volume_claim.claim_name }})
+                {% endif %}
+              </li>
+              {% endfor %}
+            </ul>
+            {% endif %}
+          </div>
+        </div>
+        {% empty %}
+        <p>No active replica pods mapped to this deployment.</p>
         {% endfor %}
-      </tbody>
-    </table>
+    </div>
     {% else %}
     <p>No active replica pods mapped to this deployment.</p>
     {% endif %}

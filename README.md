@@ -45,6 +45,8 @@ to do list:
 - make the ui actually look good
 - secure connections (using custom certs?) from machines
 - add dns & cloudflare tunnel stuff
+- better statuses (critical vs. starting up)
+- https://hackclub.slack.com/archives/C09B6AD4TFH/p1783354065045169
 
 setting up the daemon?
 

@@ -32,6 +32,12 @@ def deploy(request):
         # we have to create a service alongside the deployment if there's any ports to expose
         expose_externally = request.POST.get('expose_externally') == 'true'
         ports_raw = request.POST.get('ports') # map of containerPort:hostPort or containerPort:0 if not to be exposed but should still be marked to kube
+        image_pull_policy = request.POST.get('image_pull_policy')
+
+        # storage
+        use_persistent_storage = request.POST.get('use_persistent_storage') == 'true'
+        storage_size = request.POST.get('storage_size')
+        mount_path = request.POST.get('storage_mount_path')
 
         env = []
         if env_vars_raw: # i probably don't need to check this but just in case
@@ -54,19 +60,45 @@ def deploy(request):
                     # mark the container port on the container spec 
                     container_ports.append(client.V1ContainerPort(container_port=c_port))
 
-                    # if a service port (for exposing) has been specified, add it                    
-                    if s_port > 0:
-                        service_ports.append(client.V1ServicePort(
-                            name=f"port-{c_port}", # name for the port will be the container port it is mapped to
-                            port=s_port,         # Port exposed on the Service network
-                            target_port=c_port   # Target port inside the container
-                        ))
+                    service_ports.append(client.V1ServicePort(
+                        name=f"port-{c_port}", # name for the port will be the container port it is mapped to
+                        port=s_port,         # Port exposed on the Service network
+                        target_port=c_port   # Target port inside the container
+                    ))
 
         # resource requests and limits
         resources = client.V1ResourceRequirements(
             requests={"cpu": cpu_resource_request, "memory": memory_resource_request},
             limits={"cpu": cpu_resource_limit, "memory": memory_resource_limit}
         )
+
+        volume_mounts = []
+        pod_volumes = []
+        if use_persistent_storage:
+            pvc_name = f"{name}-pvc" # persistent volume claim
+            pvc = client.V1PersistentVolumeClaim(
+                metadata=client.V1ObjectMeta(name=pvc_name),
+                spec=client.V1PersistentVolumeClaimSpec(
+                    access_modes=["ReadWriteOnce"],
+                    resources=client.V1VolumeResourceRequirements(requests={"storage": storage_size})
+                )
+            )
+
+            try:
+                k3.kube_core_api.create_namespaced_persistent_volume_claim(namespace=namespace, body=pvc)
+            except ApiException as e:
+                # we could probably handle specific erorrs like "already exists" or smth
+                if not e.status == 409: # note: check if this works;
+                    return HttpResponse(f"error creating persistent volume claim: {str(e)}", status=503)
+        
+            volume_mounts.append(client.V1VolumeMount(
+                name="persistent-volume-storage",
+                mount_path=mount_path
+            ))
+            pod_volumes.append(client.V1Volume(
+                name="persistent-volume-storage",
+                persistent_volume_claim=client.V1PersistentVolumeClaimVolumeSource(claim_name=pvc_name)
+            ))
 
         # container spec -> pod templ spec -> deployment spec -> deployment
 
@@ -75,12 +107,17 @@ def deploy(request):
             image=image,
             ports=container_ports if container_ports else None,
             env=env if env else None,
-            resources=resources
+            resources=resources,
+            image_pull_policy=image_pull_policy,
+            volume_mounts=volume_mounts if volume_mounts else None # volumes :p
         )
 
         template = client.V1PodTemplateSpec(
             metadata=client.V1ObjectMeta(labels={"app": name}),
-            spec=client.V1PodSpec(containers=[container])
+            spec=client.V1PodSpec(
+                containers=[container],
+                volumes=pod_volumes if pod_volumes else None
+            ),
         )
         
         deployment_spec = client.V1DeploymentSpec(
@@ -195,7 +232,8 @@ def deployment_detail(request, namespace, deployment_name):
                     "resources": {
                         "requests": reqs,
                         "limits": limits
-                    }
+                    },
+                    "volume_mounts": c.volume_mounts
                 })
         
         # pull the service if it exists
@@ -231,7 +269,8 @@ def deployment_detail(request, namespace, deployment_name):
                     "ip": pod.status.pod_ip,
                     "node": pod.spec.node_name,
                     "restarts": sum([c.restart_count for c in pod.status.container_statuses]) if pod.status.container_statuses else 0,
-                    "created_at": pod.metadata.creation_timestamp
+                    "created_at": pod.metadata.creation_timestamp,
+                    "volumes": pod.spec.volumes
                 })
 
         context = {
