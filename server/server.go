@@ -228,7 +228,7 @@ type CloudflareTunnelIDorTokenResponse struct {
 	Value string `json:"value"` // the actual id or token
 }
 
-var GetPortsServicesRequest = StaticRequestInfo[struct{}, map[uint16]string]{ // port -> service name
+var GetPortsServicesRequest = StaticRequestInfo[struct{}, map[uint32]string]{ // port -> service name
 	Method: "GET",
 	Path:   "/api/ports-services",
 }

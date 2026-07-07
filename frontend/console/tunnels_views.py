@@ -8,6 +8,7 @@ from . import k3
 cloudflare_account_id = environ.get("CLOUDFLARE_ACCOUNT_ID")
 cloudflare_api_token = environ.get("CLOUDFLARE_API_TOKEN")
 
+# note: more of these api calls need to be wrapped in try/except
 def tunnels(request):
     # this should connect the externally routed tunnel to the internal service (k3s deployment)
 
@@ -86,30 +87,56 @@ def tunnels(request):
                 machine_tunnel_ingress[machine_name] = []
             machine_tunnel_ingress[machine_name].extend(ingress_rules)
     
-    machine_exposed_port_services = {} # machine name -> {port -> service name/deployment name}
+    machine_exposed_port_services = {} # machine name -> {port -> {name: name, k3_deployment_name: k3_deployment_name, k3_service_name: k3_service_name, ingress_rule: ingress_rule}}
     for machine in machines:
         port_service_map = {}
-        # see if this machine is the k3 machine
+
+        resp = requests.get(f"http://{machine.hostport}/api/ports-services")
+        if resp.status_code != 200:
+            return HttpResponse(f"error fetching ports-services for machine {machine.name}: {resp.text}", status=500)
+        else:
+            port_service_map = resp.json() # map of port -> service name
+        
+
+        # see if this machine is the k3 machine (and also let these ports override)
         host, port = machine.hostport.split(":")
         if host == k3.kube_core_api.api_client.configuration.host: # this is the k3 control node
             for svc in kube_core_api.list_service_for_all_namespaces(watch=False).items:
                 for svc_port in svc.spec.ports:
-                    name = "k3 service: " + svc.metadata.name
+                    k3_deployment_name = None
                     try:
-                        deployment = Deployment.objects.get(service_name=name)
-                        name = "k3 deployment: " + deployment.name
+                        deployment = Deployment.objects.get(service_name=svc.metadata.name)
+                        k3_deployment_name = deployment.name
                     except Deployment.DoesNotExist:
-                        pass
-                    port_service_map[svc_port.port] = name
-                    port_service_map[svc_port.node_port] = name
+                        pass # no deployment associated that we know is associated with this service
+                    
+                    obj = {
+                        "name": svc.metadata.name,
+                        "k3_deployment_name": k3_deployment_name,
+                        "k3_service_name": svc.metadata.name,
+                        "ingress_rule": None, # filled in later
+                    }
+                    # there's a node port and the port from service spec which are different but both are valid ways to access the service
+                    # note: research why that is later and what the difference is
+                    port_service_map[svc_port.node_port] = obj
+                    port_service_map[svc_port.port] = obj
+
+        # fill in ingress rule for all services if they exist
+        ingress_rules = machine_tunnel_ingress.get(machine.name, [])
+        for ingress_rule in ingress_rules:
+            service = ingress_rule.get("service")
+            port = urlparse(service).port
+            if port in port_service_map:
+                port_service_map[port]["ingress_rule"] = ingress_rule   
+
+        
         
         machine_exposed_port_services[machine.name] = port_service_map
 
-
-
-    # we now have a mapping of machines to their associated ingress rules
-    # we should add a field to each ingress rule that specifies what the service is
-
+    print(f"machine_exposed_port_services: {machine_exposed_port_services}")
+    return render(request, "tunnels.html", {
+        "machine_exposed_port_services": machine_exposed_port_services,
+    })    
 
 
 # def get_all_zones():
