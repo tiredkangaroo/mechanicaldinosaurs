@@ -7,6 +7,6 @@ register = template.Library()
 def human_readable_datetime(value):
     try:
         value_date = datetime.fromisoformat(value)
-        return value_date.strftime("%B %d, %Y %I:%M:%S %p")
+        return value_date.strftime("%B %d, %Y, %-I:%M %p %Z")
     except Exception as e:
         return value # lowk just return the original value if it can't be parsed

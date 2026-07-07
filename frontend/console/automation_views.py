@@ -105,7 +105,7 @@ def create_automation(request):
         if trigger["type"] == "time":
             trigger["time"] = request.POST.get("trigger_time")
         elif trigger["type"] == "interval":
-            trigger["every"] = request.POST.get("trigger_interval")
+            trigger["every"] = float(request.POST.get("trigger_interval"))
         
         # condition
         condition = {
@@ -176,3 +176,20 @@ def clear_automation_error_logs(request, automation_id):
         return HttpResponse(f"error clearing automation logs: {e}", status=500)
 
     return redirect(reverse("automation_detail", args=[automation_id]))
+
+def delete_automation(request, automation_id):
+    try:
+        response = requests.post(
+            f"{automation_engine_url}/api/automations/delete", 
+            headers={"Authorization": f"Bearer {automation_engine_secret}"},
+            json={"id": automation_id}
+        )
+        if response.status_code != 200: # note: should be 204
+            return HttpResponse(
+                f"error deleting automation: {response.status_code} - {response.text}", 
+                status=response.status_code
+            )
+    except Exception as e:
+        return HttpResponse(f"error deleting automation: {e}", status=500)
+
+    return redirect("index")

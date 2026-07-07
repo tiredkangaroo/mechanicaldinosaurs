@@ -39,5 +39,6 @@ urlpatterns = [
     path('automations/<str:automation_id>/', automation_views.automation_detail, name='automation_detail'),
     path('automations/<str:automation_id>/enable/', automation_views.enable_automation, name='enable_automation'),
     path('automations/<str:automation_id>/disable/', automation_views.disable_automation, name='disable_automation'),
+    path('automations/<str:automation_id>/delete/', automation_views.delete_automation, name='delete_automation'),
     path('automations/<str:automation_id>/clear-error-logs', automation_views.clear_automation_error_logs, name='clear_automation_error_logs'),
 ]

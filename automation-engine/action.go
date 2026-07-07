@@ -38,7 +38,11 @@ func (e *EmailAction) Do(ctx Context) error {
 		Text:    e.Body,
 	}
 	_, err := resendClient.Emails.Send(params)
-	return fmt.Errorf("send email: %v", err)
+	if err != nil {
+		return fmt.Errorf("send email: %v", err)
+	} else {
+		return nil
+	}
 }
 
 // note: add slack action

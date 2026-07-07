@@ -172,7 +172,8 @@
   <body>
     <h1 style="margin-bottom: 0">automation <span>{{ automation.id }}</span></h1>
 
-    <div style="display: flex; justify-content: center; align-items: center; margin-top: 15px; gap: 0.867rem">
+    <div style="display: flex; justify-content: center; align-items: center; gap: 30px; margin-top: 15px">
+    <div style="display: flex; justify-content: center; align-items: center; gap: 0.867rem">
       <p id="toggle_{{ automation.id }}_text" style="margin: 0; color: var(--md-{{ automation.enabled|yesno:"green,red" }}); font-weight: 800;">{{ automation.enabled|yesno:"enabled,disabled" }}</p>
       <label class="switch-container">
         <input
@@ -185,18 +186,24 @@
         <span class="slider"></span>
       </label>
     </div>
+      <form action="{% url 'delete_automation' automation.id %}" method="POST">
+        {% csrf_token %}
+        <button>delete</button>
+      </form>
+    </div>
 
     <div style="text-align: center; margin-top: 30px">
       <b>Last Triggered:</b>
       {% if automation.last_triggered != "0001-01-01T00:00:00Z" %}
       <!--  -->
-      {{ automation.last_triggered}} {% else %}
+      {{ automation.last_triggered|human_readable_datetime }} {% else %}
       <!--  -->
       Never {% endif %}
     </div>
     <div style="display: flex; justify-content: center; align-items: center; gap: 6px; margin-top: 6px">
-      <b>Last Action Done:</b> {% if automation.last_action_done != "0001-01-01T00:00:00Z" %}{{
-      automation.last_action_done }}{% else %}Never{% endif %}
+      <b>Last Action Done:</b> {% if automation.last_action_done != "0001-01-01T00:00:00Z" %}
+      <!--  -->
+      {{automation.last_action_done|human_readable_datetime }}{% else %}Never{% endif %}
     </div>
 
     <h3 style="margin-top: 0"><span style="color: #0c5460">trigger:</span> {{ automation.trigger.name }}</h3>
