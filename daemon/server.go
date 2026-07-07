@@ -3,6 +3,7 @@ package main
 import (
 	"log/slog"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"github.com/labstack/echo/v4"
@@ -24,6 +25,7 @@ func main() {
 	})
 
 	registerVMRoutes(api)
+	registerTunnelRoutes(api)
 
 	slog.Info("starting server", "port", PORT)
 	if err := e.Start(":" + PORT); err != nil {
@@ -139,5 +141,42 @@ func registerVMRoutes(api *echo.Group) {
 		}
 		defer conn.Close()
 		return vms.ProxyVM(name, conn)
+	})
+}
+
+func registerTunnelRoutes(api *echo.Group) {
+	server.Handle(api, server.GetCloudflareTunnelTokenRequest, func(c echo.Context, req struct{}) (*[]server.CloudflareTunnelIDorTokenResponse, error) {
+		resp := []server.CloudflareTunnelIDorTokenResponse{}
+
+		// list $HOME/.cloudflared and get the tunnel ids from filenames
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return nil, err
+		}
+		tunnelDir := filepath.Join(homeDir, ".cloudflared")
+		files, err := os.ReadDir(tunnelDir)
+		if err == nil {
+			for _, file := range files {
+				if !file.IsDir() && filepath.Ext(file.Name()) == ".json" {
+					tunnelID := file.Name()[:len(file.Name())-len(".json")]
+					resp = append(resp, server.CloudflareTunnelIDorTokenResponse{
+						Type:  "id",
+						Value: tunnelID,
+					})
+				}
+			}
+		}
+
+		// get the token from the running cloudflared process
+		cmd := exec.Command("bash", "-c", "ps aux | grep cloudflared | grep -v grep | awk '{print $NF}' | sed 's/--token //g'")
+		data, err2 := cmd.Output()
+		if err == nil || err2 == nil {
+			resp = append(resp, server.CloudflareTunnelIDorTokenResponse{
+				Type:  "token",
+				Value: string(data),
+			})
+		}
+
+		return &resp, nil
 	})
 }

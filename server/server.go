@@ -218,4 +218,19 @@ var UpdateVMRequest = StaticRequestInfo[UpdateVMReq, struct{}]{
 	Path:   "/api/vms/update",
 }
 
+var GetCloudflareTunnelTokenRequest = StaticRequestInfo[struct{}, []CloudflareTunnelIDorTokenResponse]{
+	Method: "GET",
+	Path:   "/api/tunnels/ids-and-tokens",
+}
+
+type CloudflareTunnelIDorTokenResponse struct {
+	Type  string `json:"type"`  // "id" or "token"
+	Value string `json:"value"` // the actual id or token
+}
+
+var GetPortsServicesRequest = StaticRequestInfo[struct{}, map[uint16]string]{ // port -> service name
+	Method: "GET",
+	Path:   "/api/ports-services",
+}
+
 var NoRequestData = struct{}{}

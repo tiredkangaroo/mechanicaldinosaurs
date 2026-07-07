@@ -5,6 +5,7 @@ from . import machine_views
 from . import vm_views
 from . import k3_views
 from . import automation_views
+from . import tunnels_views
 
 urlpatterns = [
     path('', views.index, name='index'),
@@ -41,4 +42,6 @@ urlpatterns = [
     path('automations/<str:automation_id>/disable/', automation_views.disable_automation, name='disable_automation'),
     path('automations/<str:automation_id>/delete/', automation_views.delete_automation, name='delete_automation'),
     path('automations/<str:automation_id>/clear-error-logs', automation_views.clear_automation_error_logs, name='clear_automation_error_logs'),
+
+    path('tunnels/', tunnels_views.tunnels, name='tunnels'),
 ]

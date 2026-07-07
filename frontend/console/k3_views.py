@@ -243,6 +243,7 @@ def deployment_detail(request, namespace, deployment_name):
             db_deployment = Deployment.objects.get(name=deployment_name)
             try:
                 service = k3.kube_core_api.read_namespaced_service(name=f"{db_deployment.service_name}", namespace=namespace)
+                print(f"service ports: {service.spec.ports}")
                 service_ports = [{"name": p.name, "port": p.port, "target_port": p.target_port} for p in service.spec.ports] if service and service.spec else []
             except ApiException as e:
                 print("error fetching service for deployment: " + str(e))
