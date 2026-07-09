@@ -13,6 +13,9 @@ cloudflare_api_token = environ.get("CLOUDFLARE_API_TOKEN")
 def tunnels(request):
     # this should connect the externally routed tunnel to the internal service (k3s deployment)
 
+    highlight = request.GET.get("highlight")
+    print(f"highlight: {highlight}") 
+
     tunnel_ids = []
     try:
         resp = requests.get(f"https://api.cloudflare.com/client/v4/accounts/{cloudflare_account_id}/tunnels", headers={
@@ -109,6 +112,7 @@ def tunnels(request):
                     "k3_namespace": None,
                     "k3_service_name": None,
                     "ingress_rule": None, # filled in later
+                    "highlight": service == highlight and highlight is not None, # highlight if this is the deployment we're looking for
                 }
         
 
@@ -132,6 +136,7 @@ def tunnels(request):
                         "k3_service_name": svc.metadata.name,
                         "ingress_rule": None, # filled in later
                         "ingress_type": None, # also filled in later
+                        "highlight": k3_deployment_name == highlight and highlight is not None, # highlight if this is the deployment we're looking for
                     }
                     # there's a node port and the port from service spec which are different but both are valid ways to access the service
                     # note: research why that is later and what the difference is
@@ -154,12 +159,13 @@ def tunnels(request):
                 port_service_map[port]["ingress_type"] = service_parse.scheme # http, https, tcp, etc.
             elif port is not None:
                 port_service_map[port] = {
-                    "name": "unknown",
+                    "name": None,
                     "k3_deployment_name": None,
                     "k3_namespace": None,
                     "k3_service_name": None,
                     "ingress_rule": ingress_rule,
                     "ingress_type": service_parse.scheme,
+                    "highlight": False,
                 }
         
         machine_exposed_port_services[machine.name] = port_service_map

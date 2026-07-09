@@ -12,6 +12,7 @@ from kubernetes.client.rest import ApiException
 from django.conf import settings
 import resend
 from django.views.decorators.clickjacking import xframe_options_exempt
+from . import automation_views
 
 @login_required
 def machines(request):
@@ -26,6 +27,8 @@ def add_machine(request):
 
         machine = Machine(name=name, hostport=hostport, secret_key=secret_key)
         machine.save()
+        machines = Machine.objects.all()
+        automation_views.update_automation_engine(machines)
         return redirect('machine_detail', machine_name=name)
     return render(request, 'add_machine.html')
 
@@ -68,6 +71,8 @@ def machine_delete(request, machine_name):
     try:
         machine = Machine.objects.get(name=machine_name)
         machine.delete()
+        machines = Machine.objects.all()
+        automation_views.update_automation_engine(machines)
     except Machine.DoesNotExist:
         return HttpResponse("Machine not found", status=404)
     return redirect('index')
@@ -98,4 +103,3 @@ def format_seconds(seconds):
         return f"{minutes} minutes, {seconds} seconds"
     else:
         return f"{seconds} seconds"
-    

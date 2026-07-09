@@ -14,6 +14,7 @@ from django.views.decorators.clickjacking import xframe_options_exempt
 from django.utils.safestring import mark_safe
 
 from . import k3
+from . import automation_views
 # note: organize imports
 
 # Create your views here.
@@ -26,6 +27,10 @@ automation_engine_secret = environ.get("AUTOMATION_ENGINE_SECRET")
 @login_required
 def index(request):
     machines = Machine.objects.all()
+    try:
+        update_automation_engine(machines)
+    except Exception as e:
+        print(f"error updating automation engine: {str(e)}")
     vms = []
     containers = []
     pods = []

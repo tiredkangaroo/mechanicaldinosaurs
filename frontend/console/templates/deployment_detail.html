@@ -153,7 +153,7 @@
     </div>
 
     {% if service_ports %}
-    <h2 style="margin-bottom: 0;">exposed ports</h2>
+    <h2 style="margin-bottom: 0;">exposed ports <a href="{% url 'tunnels' %}?highlight={{ deployment.name }}">(view network exposure)</a></h2>
     {% for port in service_ports %}
     <p style="margin: 0px 0px 8px 0px;">- <b>container port</b> {{ port.target_port }} <b>forwarded to</b> {{ port.port }}</p>
     {% endfor %}

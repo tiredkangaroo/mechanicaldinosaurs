@@ -113,7 +113,7 @@
 
     {% if machine_exposed_port_services %} {% for machine_name, ports_map in machine_exposed_port_services.items %}
     <div class="machine-block">
-      <h2>{{ machine_name }}</h2>
+      <h2 id="machine-{{ machine_name }}-title">{{ machine_name }}</h2>
       <p>there are <b>{{ machine_tunnels|get_item:machine_name|length }}</b> tunnels associated with this machine</p>
 
       <table>
@@ -127,7 +127,7 @@
         </thead>
         <tbody>
           {% for port, details in ports_map.items %}
-          <tr>
+          <tr style="background-color: {{ details.highlight|yesno:"yellow,white" }}">
             <td>
               {% if port %}
               <code>{{ port }}</code>
@@ -135,7 +135,13 @@
               <span style="color: #999; font-style: italic">None</span>
               {% endif %}
             </td>
-            <td><strong>{{ details.name }}</strong></td>
+            <td>
+                {% if details.name %}
+                <strong>{{ details.name }}</strong>
+                {% else %}
+                <span style="color: #999; font-style: italic">None</span>
+                {% endif %}
+            </td>
             <td>
               {% if details.k3_deployment_name %}
               <div style="display: flex; flex-direction: row; gap: 6px; align-items: center">
@@ -149,8 +155,10 @@
                 <span class="badge badge-k3s-service">service</span>
                 <p style="margin: 0">{{ details.k3_service_name }}</p>
               </div>
-              {% else %}
+              {% elif details.name %} <!-- basically if there's still a service name, it's a native process if it's not a k3 deployment or service -->
               <span style="color: #888">Native Process</span>
+              {% else %} <!--- since we don't even have the service name, there's no way for us to know anything -->
+              <span style="color: #aaa">-</span>
               {% endif %}
             </td>
             <td>

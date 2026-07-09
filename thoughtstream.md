@@ -39,18 +39,25 @@ curl -sfL https://get.k3s.io | K3S_URL=https://<control machine ip>:6443 K3S_TOK
 
 get the windows virtio drivers here: https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso and put them in as $MECHANICAL_DINOSAURS_DATA/drivers/virtio-win.iso
 
-to do list:
+# to do list:
+
+## priority
+
+- be able to modify ingress/tunnel routing on the web page
+- secure connections (using custom certs?) from machines
+- templating emails
+
+## medium
 
 - add updating vms
 - updating deployments
-- make the ui actually look good
-- secure connections (using custom certs?) from machines
-- add dns & cloudflare tunnel stuff
-- better statuses (critical vs. starting up)
 - https://hackclub.slack.com/archives/C09B6AD4TFH/p1783354065045169
-- templating emails
 
-setting up the daemon?
+## low
+
+- better statuses (critical vs. starting up)
+
+# setting up the daemon?
 
 - make sure virtualization is enabled
 - install libvirt and stuff (`sudo apt-get install libvirt-dev libvirt-clients`)
@@ -58,7 +65,7 @@ setting up the daemon?
 - if the daemon is running on raspi (or if cgroups is disabled for any reason), you have to enable cgroups by adding cgroup_memory=1 cgroup_enable=memory to /boot/firmware/cmdline.txt (https://docs.k3s.io/installation/requirements?os=pi)
 - copy over /etc/rancher/k3s/k3s.yaml to frontend
 
-## current env vars for each app:
+# current env vars for each app:
 
 ### console
 

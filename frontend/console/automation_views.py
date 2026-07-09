@@ -13,6 +13,9 @@ automation_engine_secret = environ.get("AUTOMATION_ENGINE_SECRET")
 
 # note: a lot of that code was copied from the index view, maybe we can refactor it into a shared func to avoid duplication spaghetti
 def automation_detail(request, automation_id):
+    machines = Machine.objects.all()
+    update_automation_engine(machines)
+
     try:
         response = requests.get(
             f"{automation_engine_url}/api/automations/{automation_id}", 
@@ -193,3 +196,14 @@ def delete_automation(request, automation_id):
         return HttpResponse(f"error deleting automation: {e}", status=500)
 
     return redirect("index")
+
+def update_automation_engine(machines):
+    machine_data_list = []
+    for machine in machines:
+        machine_data = {
+            "name": machine.name,
+            "hostport": machine.hostport,
+            "secret": machine.secret_key
+        }
+        machine_data_list.append(machine_data)
+    requests.post(f"{automation_engine_url}/api/machines", headers={"Authorization": "Bearer " + automation_engine_secret}, json=machine_data_list)
