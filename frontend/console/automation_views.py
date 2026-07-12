@@ -206,4 +206,7 @@ def update_automation_engine(machines):
             "secret": machine.secret_key
         }
         machine_data_list.append(machine_data)
-    requests.post(f"{automation_engine_url}/api/machines", headers={"Authorization": "Bearer " + automation_engine_secret}, json=machine_data_list)
+    try:
+        requests.post(f"{automation_engine_url}/api/machines", headers={"Authorization": "Bearer " + automation_engine_secret}, json=machine_data_list)
+    except Exception as e:
+        print(f"error updating automation engine with machine data: {e}")

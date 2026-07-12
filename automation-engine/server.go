@@ -161,8 +161,8 @@ func serve() {
 		if err := c.Bind(&machines); err != nil {
 			return c.JSON(400, map[string]string{"error": "invalid request body"})
 		}
-
-		slog.Info("machines updated", "machines", machines)
+		// note: logging potentially sensitive information
+		// slog.Info("machines updated", "machines", machines)
 		pushToSave() // save machines to file after updating machines
 		return c.JSON(200, map[string]string{"status": "ok"})
 	})

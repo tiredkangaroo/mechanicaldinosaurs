@@ -183,7 +183,6 @@ def vm_disconnect(request, machine_name, vm_name, session_id):
         return HttpResponse("session not found", status=404)
     return redirect('vm_detail', machine_name=machine_name, vm_name=vm_name)
 
-@login_required
 def disconnect_session(session_id):
     if len(vm_proxy_disconnect_secret) != 128:
         print("error: disconnect secret is not 128 bytes.")

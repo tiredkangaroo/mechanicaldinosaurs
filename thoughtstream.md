@@ -46,6 +46,11 @@ get the windows virtio drivers here: https://fedorapeople.org/groups/virt/virtio
 - be able to modify ingress/tunnel routing on the web page
 - secure connections (using custom certs?) from machines
 - templating emails
+- move automation engine to use shared db
+- move shared db to postgres
+- add audit logging
+- add a container registry (and auto redeploy when an image is updated)
+- add slack to automation engine
 
 ## medium
 

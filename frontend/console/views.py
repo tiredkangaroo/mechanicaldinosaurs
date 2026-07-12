@@ -28,7 +28,7 @@ automation_engine_secret = environ.get("AUTOMATION_ENGINE_SECRET")
 def index(request):
     machines = Machine.objects.all()
     try:
-        update_automation_engine(machines)
+        automation_views.update_automation_engine(machines)
     except Exception as e:
         print(f"error updating automation engine: {str(e)}")
     vms = []
