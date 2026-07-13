@@ -1,7 +1,7 @@
 package main
 
 import (
-	"database/sql"
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -11,14 +11,15 @@ import (
 	"sync"
 	"time"
 
-	_ "modernc.org/sqlite"
+	"github.com/jackc/pgx/v5"
 )
 
 var PORT = os.Getenv("PORT")
 var DISCONNECT_PORT = os.Getenv("DISCONNECT_PORT")
 var DISCONNECT_SECRET = os.Getenv("DISCONNECT_SECRET")
-var DB_FILE = os.Getenv("DB_FILE")
-var db *sql.DB
+var DATABASE_URL = os.Getenv("DATABASE_URL")
+
+var conn *pgx.Conn
 
 var sessionIDsToErrChan = make(map[string]chan error)
 var sessionIDsToErrChanLock = &sync.Mutex{}
@@ -29,12 +30,10 @@ func main() {
 	}
 
 	var err error
-	db, err = sql.Open("sqlite", DB_FILE)
+	conn, err = pgx.Connect(context.Background(), DATABASE_URL)
 	if err != nil {
-		log.Fatalf("failed to open database: %v", err)
+		log.Fatalf("failed to connect to database: %v", err)
 	}
-
-	db.SetMaxOpenConns(1)
 
 	listener, err := net.Listen("tcp", ":"+PORT)
 	if err != nil {
@@ -75,7 +74,8 @@ func main() {
 func handleConnection(clientConn net.Conn) {
 	defer clientConn.Close()
 
-	var vmName, hostport, secretKey, createdAt, sessionID string
+	var vmName, hostport, secretKey, sessionID string
+	var createdAt time.Time
 
 	query := `
 		SELECT s.session_id, s.vm_name, s.created_at, m.hostport, m.secret_key
@@ -85,8 +85,8 @@ func handleConnection(clientConn net.Conn) {
 		ORDER BY s.created_at DESC
 		LIMIT 1`
 
-	err := db.QueryRow(query).Scan(&sessionID, &vmName, &createdAt, &hostport, &secretKey)
-	if err == sql.ErrNoRows {
+	err := conn.QueryRow(context.Background(), query).Scan(&sessionID, &vmName, &createdAt, &hostport, &secretKey)
+	if err == pgx.ErrNoRows {
 		log.Printf("unauthorized: no active sessions found in database")
 		return
 	} else if err != nil {
@@ -96,23 +96,23 @@ func handleConnection(clientConn net.Conn) {
 
 	clientAddr := clientConn.RemoteAddr().String()
 
-	claimQuery := `UPDATE console_vmsession SET claimed = TRUE, claimed_by = ? WHERE session_id = ?`
-	_, err = db.Exec(claimQuery, clientAddr, sessionID)
+	claimQuery := `UPDATE console_vmsession SET claimed = TRUE, claimed_by = $1 WHERE session_id = $2`
+	_, err = conn.Exec(context.Background(), claimQuery, clientAddr, sessionID)
 	if err != nil {
 		log.Printf("failed to claim session %s by %s: %v", sessionID, clientAddr, err)
 		return
 	}
 
 	defer func() {
-		deleteQuery := `DELETE FROM console_vmsession WHERE session_id = ?`
-		if _, err := db.Exec(deleteQuery, sessionID); err != nil {
+		deleteQuery := `DELETE FROM console_vmsession WHERE session_id = $1`
+		if _, err := conn.Exec(context.Background(), deleteQuery, sessionID); err != nil {
 			log.Printf("failed to delete session %s after closing: %v", sessionID, err)
 		} else {
 			log.Printf("successfully deleted session %s from database", sessionID)
 		}
 	}()
 
-	log.Printf("forwarding connection from %s to %s (created at %s, session id: %s)", clientAddr, vmName, createdAt, sessionID)
+	log.Printf("forwarding connection from %s to %s (created at %s, session id: %s)", clientAddr, vmName, createdAt.String(), sessionID)
 
 	daemonConn, err := net.DialTimeout("tcp", hostport, 5*time.Second)
 	if err != nil {

@@ -195,7 +195,7 @@ def disconnect_session(session_id):
         print(f"Connecting to disconnect service at {vm_proxy_disconnect_host}:{vm_proxy_disconnect_port}...")
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.settimeout(5.0) # 5 second timeout should be enough i think
-            s.connect((vm_proxy_disconnect_host, vm_proxy_disconnect_port))
+            s.connect((vm_proxy_disconnect_host, int(vm_proxy_disconnect_port)))
             
             s.sendall(vm_proxy_disconnect_secret.encode('utf-8'))
             s.sendall(session_id.encode('utf-8'))

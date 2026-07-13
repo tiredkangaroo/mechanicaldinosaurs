@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 from os import path, environ
+from urllib.parse import urlparse
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -95,11 +96,27 @@ WSGI_APPLICATION = 'app.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+def postgres_config():
+    postgres_url = environ.get('DATABASE_URL')
+    
+    # adding validations here bc im a dumbass
+    if not postgres_url:
+        raise Exception("DATABASE_URL environment variable not set")
+    url = urlparse(postgres_url)
+    if url.scheme != 'postgres':
+        raise Exception("DATABASE_URL must be a postgres URL")
+
+    return {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': url.path[1:],
+        'USER': url.username,
+        'PASSWORD': url.password,
+        'HOST': url.hostname,
+        'PORT': url.port,
     }
+
+DATABASES = {
+    'default': postgres_config()
 }
 
 
