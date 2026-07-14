@@ -32,20 +32,6 @@ func serve() {
 		}
 	})
 
-	api.GET("/automations", func(c echo.Context) error {
-		return c.JSON(200, automations) // the automation struct has a marshal json function to make it communicable
-	})
-
-	api.GET("/automations/:id", func(c echo.Context) error {
-		id := c.Param("id")
-		for _, a := range automations {
-			if a.ID == id {
-				return c.JSON(200, a) // the automation struct has a marshal json function to make it communicable
-			}
-		}
-		return c.JSON(404, map[string]string{"error": "automation not found"})
-	})
-
 	// add new automation
 	api.POST("/automations", func(c echo.Context) error {
 		var newAutomation Automation // there's an unmarshal json that handles this stuff, the actual json that should be given should be the communicable automation
@@ -62,7 +48,7 @@ func serve() {
 		}
 		automations = append(automations, &newAutomation)
 		slog.Info("new automation added", "automation_id", newAutomation.ID)
-		pushToSave() // save automations to file after adding new automation
+		saveAutomation(&newAutomation) // save automations to database after adding new automation
 		return c.JSON(201, map[string]string{"status": "ok"})
 	})
 
@@ -92,7 +78,7 @@ func serve() {
 		}
 		automations = append(automations[:index], automations[index+1:]...) // remove the automation from the slice
 		slog.Info("automation deleted", "automation_id", automation.ID)
-		pushToSave() // save automations to file after deleting automation
+		deleteAutomation(automation) // delete automation from database after deleting automation
 		return c.JSON(200, map[string]string{"status": "ok"})
 	})
 
@@ -113,7 +99,7 @@ func serve() {
 			return c.JSON(500, map[string]string{"error": "failed to enable automation: " + err.Error()})
 		}
 		slog.Info("automation enabled", "automation_id", automation.ID)
-		pushToSave() // save automations to file after enabling automation
+		saveAutomation(automation) // save automations to database after enabling automation
 		return c.JSON(200, map[string]string{"status": "ok"})
 	})
 
@@ -134,7 +120,7 @@ func serve() {
 			return c.JSON(500, map[string]string{"error": "failed to disable automation: " + err.Error()})
 		}
 		slog.Info("automation disabled", "automation_id", automation.ID)
-		pushToSave() // save automations to file after disabling automation
+		saveAutomation(automation) // save automations to database after disabling automation
 		return c.JSON(200, map[string]string{"status": "ok"})
 	})
 
@@ -152,18 +138,7 @@ func serve() {
 		}
 		automation.ErrorLogs = []Error{}
 		slog.Info("automation error logs cleared", "automation_id", automation.ID)
-		pushToSave() // save automations to file after clearing logs
-		return c.JSON(200, map[string]string{"status": "ok"})
-	})
-
-	api.POST("/machines", func(c echo.Context) error {
-		machines = []Machine{}
-		if err := c.Bind(&machines); err != nil {
-			return c.JSON(400, map[string]string{"error": "invalid request body"})
-		}
-		// note: logging potentially sensitive information
-		// slog.Info("machines updated", "machines", machines)
-		pushToSave() // save machines to file after updating machines
+		saveAutomation(automation) // save automations to database after clearing logs
 		return c.JSON(200, map[string]string{"status": "ok"})
 	})
 

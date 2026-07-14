@@ -1,6 +1,6 @@
 from django.shortcuts import render, HttpResponse, redirect, reverse
 from django.http import StreamingHttpResponse
-from .models import Machine, VMSession
+from .models import Machine, VMSession, Automation
 import requests, math, uuid, socket
 from dateutil import parser 
 from django.contrib.auth.decorators import login_required
@@ -27,10 +27,6 @@ automation_engine_secret = environ.get("AUTOMATION_ENGINE_SECRET")
 @login_required
 def index(request):
     machines = Machine.objects.all()
-    try:
-        automation_views.update_automation_engine(machines)
-    except Exception as e:
-        print(f"error updating automation engine: {str(e)}")
     vms = []
     containers = []
     pods = []
@@ -96,8 +92,7 @@ def index(request):
 
     automations = []
     try:
-        response = requests.get(f"{automation_engine_url}/api/automations", headers={"Authorization": f"Bearer {automation_engine_secret}"})
-        automations = response.json()
+        automations = [a.json_data for a in Automation.objects.all()]
     except Exception as e:
         print(f"error fetching automations: {str(e)}")
 

@@ -31,6 +31,7 @@ sudo virsh net-autostart default
 
 ```
 sudo apt-get install libvirt-dev libvirt-clients
+sudo apt install qemu-kvm libvirt-daemon-system
 ```
 
 ```
@@ -47,10 +48,10 @@ get the windows virtio drivers here: https://fedorapeople.org/groups/virt/virtio
 - secure connections (using custom certs?) from machines
 - templating emails
 - move automation engine to use shared db
-- move shared db to postgres instead of just having it in a single sqlite file lol
 - add audit logging
 - add a container registry (and auto redeploy when an image is updated)
 - add slack to automation engine
+- download isos for machines
 
 ## medium
 

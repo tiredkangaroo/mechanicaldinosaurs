@@ -28,7 +28,6 @@ def add_machine(request):
         machine = Machine(name=name, hostport=hostport, secret_key=secret_key)
         machine.save()
         machines = Machine.objects.all()
-        automation_views.update_automation_engine(machines)
         return redirect('machine_detail', machine_name=name)
     return render(request, 'add_machine.html')
 
@@ -72,7 +71,6 @@ def machine_delete(request, machine_name):
         machine = Machine.objects.get(name=machine_name)
         machine.delete()
         machines = Machine.objects.all()
-        automation_views.update_automation_engine(machines)
     except Machine.DoesNotExist:
         return HttpResponse("Machine not found", status=404)
     return redirect('index')

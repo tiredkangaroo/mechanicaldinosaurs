@@ -66,7 +66,13 @@ def tunnels(request):
     machine_tunnels = {} # machine name -> list of tunnel ids
     for machine in machines:
         # get a machine's tunnel ids/tokens
-        resp = requests.get(f"http://{machine.hostport}/api/tunnels/ids-and-tokens", headers={"Authorization": f"Bearer {machine.secret_key}"})
+        print("getting tunnels for machine", machine.name)
+        resp = None
+        try:
+            resp = requests.get(f"http://{machine.hostport}/api/tunnels/ids-and-tokens", headers={"Authorization": f"Bearer {machine.secret_key}"})
+        except Exception as e:
+            continue # just skip this machine if it can't be reached
+        
         if resp.status_code != 200:
             continue # just skip
         for idOrToken in resp.json():
@@ -101,7 +107,13 @@ def tunnels(request):
     for machine in machines:
         port_service_map = {}
 
-        resp = requests.get(f"http://{machine.hostport}/api/ports-services", headers={"Authorization": f"Bearer {machine.secret_key}"})
+        resp = None
+        print("getting ports-services for machine", machine.name)
+        try:
+            resp = requests.get(f"http://{machine.hostport}/api/ports-services", headers={"Authorization": f"Bearer {machine.secret_key}"})
+        except Exception as e:
+            continue
+        
         if resp.status_code != 200:
             return HttpResponse(f"error fetching ports-services for machine {machine.name}: {resp.text}", status=500)
         else:

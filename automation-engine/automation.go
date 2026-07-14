@@ -48,7 +48,7 @@ func (a *Automation) String() string {
 }
 
 func (a *Automation) OnTriggered(c Context) {
-	defer pushToSave() // things probably changed (like last triggered, last action done, error logs, etc.), so we should save the automations to file
+	defer saveAutomation(a) // things probably changed (like last triggered, last action done, error logs, etc.), so we should save the automations to database
 
 	slog.Info("automation triggered", "automation_id", a.ID)
 	a.LastTriggered = time.Now()

@@ -2,7 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, HttpResponse, redirect, reverse
 from os import environ
 import uuid, requests, json
-from .models import Machine
+from .models import Machine, Automation
 from django.utils.safestring import mark_safe
 from dateutil import parser
 import requests
@@ -14,21 +14,13 @@ automation_engine_secret = environ.get("AUTOMATION_ENGINE_SECRET")
 # note: a lot of that code was copied from the index view, maybe we can refactor it into a shared func to avoid duplication spaghetti
 def automation_detail(request, automation_id):
     machines = Machine.objects.all()
-    update_automation_engine(machines)
 
+    automation = None
     try:
-        response = requests.get(
-            f"{automation_engine_url}/api/automations/{automation_id}", 
-            headers={"Authorization": f"Bearer {automation_engine_secret}"}
-        )
-        if response.status_code != 200:
-            return HttpResponse(
-                f"error fetching automation: {response.status_code} - {response.text}", 
-                status=response.status_code
-            )
-        automation = response.json()
-    except Exception as e:
-        return HttpResponse(f"error fetching automation: {e}", status=500)
+        automation_model = Automation.objects.get(automation_id=automation_id)
+        automation = automation_model.json_data
+    except Automation.DoesNotExist:
+        return HttpResponse(f"automation with id {automation_id} does not exist", status=404)
     
     trigger = automation.get("trigger", {})
     if trigger.get("type") == "time":
@@ -66,6 +58,12 @@ def automation_detail(request, automation_id):
         automation["error_logs"] = list(reversed(automation["error_logs"]))  # Show the most recent errors first
         
     return render(request, "automation_detail.html", {"automation": automation})
+
+# all of the following calls change the state of the automation
+# but we rely on the automation engine to change it in the database, so we don't update here
+# we only use the db for automation_detail bc that's better than calling the automation engine for data that we can get from the db
+# the list of automations will also query the db instead
+# :explodes:
 
 def enable_automation(request, automation_id):
     try:
@@ -196,17 +194,3 @@ def delete_automation(request, automation_id):
         return HttpResponse(f"error deleting automation: {e}", status=500)
 
     return redirect("index")
-
-def update_automation_engine(machines):
-    machine_data_list = []
-    for machine in machines:
-        machine_data = {
-            "name": machine.name,
-            "hostport": machine.hostport,
-            "secret": machine.secret_key
-        }
-        machine_data_list.append(machine_data)
-    try:
-        requests.post(f"{automation_engine_url}/api/machines", headers={"Authorization": "Bearer " + automation_engine_secret}, json=machine_data_list)
-    except Exception as e:
-        print(f"error updating automation engine with machine data: {e}")

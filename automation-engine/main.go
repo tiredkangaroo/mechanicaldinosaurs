@@ -1,13 +1,15 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
+	"context"
 	"log/slog"
 	"os"
+
+	"github.com/jackc/pgx/v5"
 )
 
-var AUTOMATIONS_SAVE_PATH = os.Getenv("AUTOMATIONS_SAVE_PATH")
+var DATABASE_URL = os.Getenv("DATABASE_URL")
+var conn *pgx.Conn
 
 func main() {
 	loadSave()
@@ -15,27 +17,33 @@ func main() {
 }
 
 func loadSave() {
-	automations = []*Automation{} // reset automations to empty slice before loading from file
-	raw_data, err := os.ReadFile(AUTOMATIONS_SAVE_PATH)
+	automations = []*Automation{} // reset to empty slice; ts is a global var
+
+	var err error
+	conn, err = pgx.Connect(context.Background(), DATABASE_URL)
 	if err != nil {
-		slog.Error("failed to read automations file", "error", err)
+		slog.Error("failed to connect to database", "error", err)
 		return
 	}
-	var data struct {
-		AutomationsCommunicable []*AutomationCommunicable `json:"automations"`
-		Machines                []Machine                 `json:"machines"`
-	}
-	err = json.Unmarshal(raw_data, &data)
+	rows, err := conn.Query(context.Background(), "SELECT json_data FROM console_automation")
 	if err != nil {
-		slog.Error("failed to unmarshal automations file", "error", err)
+		slog.Error("failed to query automations from database", "error", err)
 		return
 	}
-	fmt.Println("loaded machines communicated from save file: ", len(data.Machines))
-	fmt.Println("loaded automations communicated from save file: ", len(data.AutomationsCommunicable))
+	defer rows.Close()
 
-	machines = data.Machines
+	var automationsCommunicable []AutomationCommunicable
 
-	for _, ac := range data.AutomationsCommunicable {
+	for rows.Next() {
+		var d AutomationCommunicable
+		if err := rows.Scan(&d); err != nil {
+			slog.Error("failed to scan automations from database", "error", err)
+			continue
+		}
+		automationsCommunicable = append(automationsCommunicable, d)
+	}
+
+	for _, ac := range automationsCommunicable {
 		automation, err := ac.ToAutomation()
 		if err != nil {
 			slog.Error("failed to convert communicated automation to automation", "error", err)
@@ -53,21 +61,10 @@ func loadSave() {
 	}
 }
 
-func pushToSave() {
-	data, err := json.MarshalIndent(struct {
-		Automations []*Automation `json:"automations"`
-		Machines    []Machine     `json:"machines"`
-	}{
-		Automations: automations,
-		Machines:    machines,
-	}, "", "  ") // again the marshal json function should handle the automations to make it communicable
-	if err != nil {
-		slog.Error("failed to marshal automations to save file", "error", err)
-		return
-	}
-	err = os.WriteFile(AUTOMATIONS_SAVE_PATH, data, 0644)
-	if err != nil {
-		slog.Error("failed to write automations to save file", "error", err)
-		return
-	}
+func saveAutomation(automation *Automation) {
+	ac := automation.ToCommunicable()
+	conn.Exec(context.Background(), "INSERT INTO console_automation (automation_id, json_data) VALUES ($1, $2) ON CONFLICT (automation_id) DO UPDATE SET json_data = EXCLUDED.json_data", automation.ID, ac)
+}
+func deleteAutomation(automation *Automation) {
+	conn.Exec(context.Background(), "DELETE FROM console_automation WHERE automation_id = $1", automation.ID)
 }
