@@ -30,9 +30,8 @@ func performDataRefresh() {
 }
 
 func getMachines() ([]Machine, error) {
-	rows, err := conn.Query(context.Background(), "SELECT name, hostport, secret_key FROM console_machine;")
+	rows, err := pool.Query(context.Background(), "SELECT name, hostport, secret_key FROM console_machine;")
 	if err != nil {
-		slog.Error("failed to query machines from database", "error", err)
 		return nil, err
 	}
 	defer rows.Close()

@@ -161,21 +161,38 @@
         <label for="action_type">Action Type:</label>
         <select id="action_type" name="action_type" required onchange="updateActionFields()">
           <option value="email">email</option>
+          <option value="slack">slack</option>
         </select>
       </div>
 
       <div class="sub-fields" id="action_email_fields">
         <div class="field-row">
           <label for="action_email_to">Send To:</label>
-          <input type="text" id="action_email_to" name="action_email_to" placeholder="someone@example.com" required />
+          <input type="text" id="action_email_to" name="action_email_to" placeholder="someone@example.com" />
         </div>
         <div class="field-row">
           <label for="action_email_subject">Subject:</label>
-          <input type="text" id="action_email_subject" name="action_email_subject" required />
+          <input type="text" id="action_email_subject" name="action_email_subject" />
         </div>
         <div class="field-row">
           <label for="action_email_body">Body:</label>
-          <textarea id="action_email_body" name="action_email_body" required></textarea>
+          <textarea id="action_email_body" name="action_email_body"></textarea>
+        </div>
+      </div>
+
+      <div class="sub-fields hidden" id="action_slack_fields">
+        <div class="field-row">
+          <label for="action_slack_conversation_id">Conversation ID:</label>
+          <input
+            type="text"
+            id="action_slack_conversation_id"
+            name="action_slack_conversation_id"
+            placeholder="C1234567890"
+          />
+        </div>
+        <div class="field-row">
+          <label for="action_slack_message">Message:</label>
+          <textarea id="action_slack_message" name="action_slack_message"></textarea>
         </div>
       </div>
 
@@ -382,6 +399,7 @@
       function updateActionFields() {
         const type = document.getElementById("action_type").value;
         document.getElementById("action_email_fields").classList.toggle("hidden", type !== "email");
+        document.getElementById("action_slack_fields").classList.toggle("hidden", type !== "slack");
       }
 
       document.getElementById("automation-form").addEventListener("submit", function (e) {

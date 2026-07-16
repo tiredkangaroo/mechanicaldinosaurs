@@ -232,6 +232,21 @@
       </table>
     </div>
     {% endif %}
+    {% if automation.action.type == "slack" and automation.action.slack %}
+    <div style="margin-left: 20px">
+      <h4 style="margin-top: 20px; margin-bottom: 10px; font-size: 1rem">slack payload</h4>
+      <table>
+        <tr>
+          <th>Conversation ID</th>
+          <td><code>{{ automation.action.slack.conversation_id }}</code></td>
+        </tr>
+        <tr>
+          <th>Message</th>
+          <td><pre style="margin: 0">{{ automation.action.slack.message }}</pre></td>
+        </tr>
+      </table>
+    </div>
+    {% endif %}
 
     <h2>error logs</h2>
     {% if automation.error_logs %}

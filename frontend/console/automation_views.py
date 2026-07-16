@@ -53,6 +53,8 @@ def automation_detail(request, automation_id):
     action = automation.get("action", {})
     if action.get("type") == "email":
         action["name"] = mark_safe(f"send email to {action.get('email', {}).get('to')}")
+    if action.get("type") == "slack":
+        action["name"] = mark_safe(f"send slack message to {action.get('slack', {}).get('conversation_id')}")
     
     if automation.get("error_logs"):
         automation["error_logs"] = list(reversed(automation["error_logs"]))  # Show the most recent errors first
@@ -132,6 +134,11 @@ def create_automation(request):
                 "to": request.POST.get("action_email_to"),
                 "subject": request.POST.get("action_email_subject"),
                 "body": request.POST.get("action_email_body"),
+            }
+        if action["type"] == "slack":
+            action["slack"] = {
+                "conversation_id": request.POST.get("action_slack_conversation_id"),
+                "message": request.POST.get("action_slack_message"),
             }
         
         # send to automation engine

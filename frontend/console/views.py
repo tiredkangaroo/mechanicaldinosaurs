@@ -116,5 +116,7 @@ def index(request):
 
         if automation["action"]["type"] == "email":
             automation["action"]["name"] = mark_safe(f"<b>send email to</b> {automation['action']['email']['to']}")
+        if automation["action"]["type"] == "slack":
+            automation["action"]["name"] = mark_safe(f"<b>send slack message to </b><code>{automation['action']['slack']['conversation_id']}</code>")
 
     return render(request, 'index.html', {'machines': machines, 'vms': vms, 'deployments_by_ns': deployments_by_namespace, 'automations': automations})

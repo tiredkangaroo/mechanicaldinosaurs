@@ -164,6 +164,8 @@ func (a *Automation) ToCommunicable() *AutomationCommunicable {
 	switch a.Action.(type) {
 	case *EmailAction:
 		ac.Action.Email = a.Action.(*EmailAction)
+	case *SlackAction:
+		ac.Action.Slack = a.Action.(*SlackAction)
 	}
 
 	return ac
@@ -189,6 +191,11 @@ func (ac *AutomationCommunicable) ToAutomation() (*Automation, error) {
 			return nil, fmt.Errorf("email action is nil but action type is email")
 		}
 		action = ac.Action.Email
+	case "slack":
+		if ac.Action.Slack == nil {
+			return nil, fmt.Errorf("slack action is nil but action type is slack")
+		}
+		action = ac.Action.Slack
 	default:
 		return nil, fmt.Errorf("unknown action type: %s", ac.Action.Type)
 	}
