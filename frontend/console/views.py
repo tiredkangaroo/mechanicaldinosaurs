@@ -1,7 +1,7 @@
 from django.shortcuts import render, HttpResponse, redirect, reverse
 from django.http import StreamingHttpResponse
 from .models import Machine, VMSession, Automation
-import requests, math, uuid, socket
+import requests, math, uuid, socket, urllib3
 from dateutil import parser 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
@@ -30,9 +30,10 @@ def index(request):
     vms = []
     containers = []
     pods = []
+    print("getting vms from all machines")
     for machine in machines:
             try:
-                machine.vms = requests.get(f"http://{machine.hostport}/api/vms/list", headers={'Authorization': f'Bearer {machine.secret_key}'}).json()
+                machine.vms = requests.get(f"http://{machine.hostport}/api/vms/list", headers={'Authorization': f'Bearer {machine.secret_key}'}, timeout=(1, 10)).json()
                 if not getattr(machine.vms, 'error', None): # not err is present
                     for vm in machine.vms:
                         vm['machine'] = machine
@@ -41,10 +42,11 @@ def index(request):
             except Exception as e:
                 print(f"error fetching vms for machine {machine.name}: {str(e)}")
                 machine.status = "unreachable"
-    
+
+    print("getting deployments for all namespaces") 
     deployments_by_namespace = {}
     try:
-        deployments_list = k3.kube_app_api.list_deployment_for_all_namespaces(watch=False)
+        deployments_list = k3.kube_app_api.list_deployment_for_all_namespaces(watch=False, _request_timeout=1)
         
         for deploy in deployments_list.items:
             # get desired and ready replicas (wow kaboom kablow)
@@ -85,11 +87,14 @@ def index(request):
             })
     except ApiException as e:
         print(f"error fetching deployments from cluster: {str(e)}")
+    except urllib3.exceptions.MaxRetryError as e:
+        print(f"max retry error: {str(e)}")
 
     # sort by status (crititcal > scaling > healthy) and then by created at for each namespace
     for namespace, deploys in deployments_by_namespace.items():
         deploys.sort(key=lambda x: (x['status'], x['created_at']))
 
+    print("pulling automations from db")
     automations = []
     try:
         automations = [a.json_data for a in Automation.objects.all()]

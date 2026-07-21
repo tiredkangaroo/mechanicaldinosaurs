@@ -103,16 +103,10 @@
   <body>
     <h1
       id="machine-name"
-      style="
-        background-color: var(--secondary-color);
-        width: fit-content;
-        text-align: center;
-        margin-left: auto;
-        margin-right: auto;
-        padding: 8px 22px;
-      "
+      style="width: fit-content; text-align: center; margin-left: auto; margin-right: auto; padding: 8px 22px"
     >
-      {{machine.name}} ({{machine.hostport}})
+      {{machine.name}}
+      <pre>({{machine.hostport}})</pre>
     </h1>
 
     {% if machine.vm_status.error %}

@@ -110,7 +110,11 @@
   </head>
   <body>
     <h1>network exposure</h1>
-
+    {% for error in errors %}
+    <div class="error-flash">
+      {{ error }}
+    </div>
+    {% endfor %}
     {% if machine_exposed_port_services %} {% for machine_name, ports_map in machine_exposed_port_services.items %}
     <div class="machine-block">
       <h2 id="machine-{{ machine_name }}-title">{{ machine_name }}</h2>

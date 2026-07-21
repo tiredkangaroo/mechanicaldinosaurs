@@ -21,7 +21,7 @@ def tunnels(request):
         resp = requests.get(f"https://api.cloudflare.com/client/v4/accounts/{cloudflare_account_id}/tunnels", headers={
             "Authorization": f"Bearer {cloudflare_api_token}",
             "Content-Type": "application/json"
-        })
+        }, timeout=(1, 10))
         data = resp.json()
         if resp.status_code != 200:
             return HttpResponse(f"error fetching tunnels: {data.get('errors', ['Unknown error'])}", status=500)
@@ -37,7 +37,7 @@ def tunnels(request):
         resp = requests.get(f"https://api.cloudflare.com/client/v4/accounts/{cloudflare_account_id}/cfd_tunnel/{tunnel_id}/configurations", headers={
             "Authorization": f"Bearer {cloudflare_api_token}",
             "Content-Type": "application/json"
-        })
+        }, timeout=(1, 10))
         data = resp.json()
         match resp.status_code:
             case 200:
@@ -53,7 +53,7 @@ def tunnels(request):
         resp = requests.get(f"https://api.cloudflare.com/client/v4/accounts/{cloudflare_account_id}/cfd_tunnel/{tunnel_id}/token", headers={
             "Authorization": f"Bearer {cloudflare_api_token}",
             "Content-Type": "application/json"
-        })
+        }, timeout=(1, 10))
         data = resp.json()
         match resp.status_code:
             case 200:
@@ -64,13 +64,15 @@ def tunnels(request):
 
     machines = Machine.objects.all()
     machine_tunnels = {} # machine name -> list of tunnel ids
+    errors = []
     for machine in machines:
         # get a machine's tunnel ids/tokens
         print("getting tunnels for machine", machine.name)
         resp = None
         try:
-            resp = requests.get(f"http://{machine.hostport}/api/tunnels/ids-and-tokens", headers={"Authorization": f"Bearer {machine.secret_key}"})
+            resp = requests.get(f"http://{machine.hostport}/api/tunnels/ids-and-tokens", headers={"Authorization": f"Bearer {machine.secret_key}"}, timeout=(1, 10))
         except Exception as e:
+            errors.append(f"fetching tunnel for machine {machine.name}: {str(e)}")
             continue # just skip this machine if it can't be reached
         
         if resp.status_code != 200:
@@ -110,7 +112,7 @@ def tunnels(request):
         resp = None
         print("getting ports-services for machine", machine.name)
         try:
-            resp = requests.get(f"http://{machine.hostport}/api/ports-services", headers={"Authorization": f"Bearer {machine.secret_key}"})
+            resp = requests.get(f"http://{machine.hostport}/api/ports-services", headers={"Authorization": f"Bearer {machine.secret_key}"}, timeout=(1, 10))
         except Exception as e:
             continue
         
@@ -192,4 +194,5 @@ def tunnels(request):
     return render(request, "tunnels.html", {
         "machine_exposed_port_services": machine_exposed_port_services,
         "machine_tunnels": machine_tunnels,
+        "errors": errors,
     })    

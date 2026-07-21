@@ -206,6 +206,17 @@ var DeleteVMRequest = StaticRequestInfo[VMTargetReq, struct{}]{
 	Path:   "/api/vms/delete",
 }
 
+var DownloadISORequest = StaticRequestInfo[DownloadISOReq, struct{}]{
+	Method: "GET",
+	Path:   "/api/vms/download-iso",
+}
+
+type DownloadISOReq struct {
+	URL     string `json:"url"`
+	OSName  string `json:"os_name"` // e.g. "ubuntu-desktop" or "ubuntu-server"
+	Version string `json:"version"` // e.g. "22.04" or "26.04"
+}
+
 type UpdateVMReq struct {
 	Name       string `json:"name"`
 	VCPUs      uint   `json:"vcpus,omitempty"`

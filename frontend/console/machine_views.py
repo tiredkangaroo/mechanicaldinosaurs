@@ -39,7 +39,7 @@ def machine_detail(request, machine_name):
     except Machine.DoesNotExist:
         return HttpResponse("Machine not found", status=404)
     try:
-        machine.info = requests.get(f'http://{machine.hostport}/api/info', headers={'Authorization': f'Bearer {machine.secret_key}'}).json()
+        machine.info = requests.get(f'http://{machine.hostport}/api/info', headers={'Authorization': f'Bearer {machine.secret_key}'}, timeout=(1, 10)).json()
         machine.info['uptime'] = format_seconds(machine.info.get('uptime', 0))
         machine.info['memory_util'] = f"{( float(machine.info.get('memory_used', 0)) / float(machine.info.get('memory', 1))) * 100:.2f}%"
         machine.info['storage_util'] = f"{(float(machine.info.get('storage_used', 0)) / float(machine.info.get('storage_capacity', 1))) * 100:.2f}%"
@@ -51,13 +51,13 @@ def machine_detail(request, machine_name):
         machine.info = {'error': str(e)}
     
     try:
-        resp = requests.get(f"http://{machine.hostport}/api/vms/available", headers={'Authorization': f'Bearer {machine.secret_key}'})
+        resp = requests.get(f"http://{machine.hostport}/api/vms/available", headers={'Authorization': f'Bearer {machine.secret_key}'}, timeout=(1, 10))
         if resp.status_code == 503:
             machine.vm_status = "not available ❌"
         else:
             machine.vm_status = "available ✅"
             try:
-                machine.vms = requests.get(f"http://{machine.hostport}/api/vms/list", headers={'Authorization': f'Bearer {machine.secret_key}'}).json()
+                machine.vms = requests.get(f"http://{machine.hostport}/api/vms/list", headers={'Authorization': f'Bearer {machine.secret_key}'}, timeout=(1, 10)).json()
             except Exception as e:
                 machine.vms = {'error': str(e)}
     except Exception as e:

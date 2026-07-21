@@ -2,10 +2,15 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	"github.com/shirou/gopsutil/v4/net"
@@ -176,6 +181,62 @@ func registerVMRoutes(api *echo.Group) {
 		if err := vms.DeleteVM(req.Name); err != nil {
 			return nil, err
 		}
+		return nil, nil
+	})
+
+	server.Handle(vmRouter, server.DownloadISORequest, func(c echo.Context, req server.DownloadISOReq) (*struct{}, error) {
+		downloadURL := req.URL
+		switch req.OSName {
+		case "ubuntu-desktop":
+			if runtime.GOARCH != "amd64" {
+				return nil, fmt.Errorf("ubuntu-desktop is only available for amd64 architecture")
+			}
+			downloadURL = fmt.Sprintf("https://mirror.pilotfiber.com/ubuntu-iso/%s/ubuntu-%s-desktop-amd64.iso", req.Version)
+		case "ubuntu-server":
+			if runtime.GOARCH != "amd64" {
+				return nil, fmt.Errorf("ubuntu-server is only available for amd64 architecture")
+			}
+			downloadURL = fmt.Sprintf("https://mirror.pilotfiber.com/ubuntu-iso/%s/ubuntu-%s-live-server-amd64.iso", req.Version)
+		case "debian":
+			downloadURL = fmt.Sprintf("https://cdimage.debian.org/debian-cd/%s/%s/iso-cd/debian-%s-%s-netinst.iso", req.Version, runtime.GOARCH, req.Version, runtime.GOARCH)
+		}
+		if downloadURL == "" {
+			return nil, fmt.Errorf("download URL could not be determined and no download URL provided (os/version: %s/%s on arch: %s)", req.OSName, req.Version, runtime.GOARCH)
+		}
+		// download the ISO to $MECHANICAL_DINOSAURS_DATA/boot_files
+		var isoName string
+		if req.OSName == "" {
+			u, err := url.Parse(downloadURL)
+			if err != nil {
+				return nil, fmt.Errorf("download URL not parseable: %s", downloadURL)
+			}
+			pathSplit := strings.Split(u.Path, "/")
+			isoName = pathSplit[len(pathSplit)-1]
+			if isoName == "" { // no path?!
+				isoName = fmt.Sprintf("iso-downloaded-from-%s.iso", u.Host)
+			}
+		} else {
+			isoName = fmt.Sprintf("%s-%s.iso", req.OSName, req.Version)
+		}
+
+		file, err := os.OpenFile(filepath.Join(MECHANICAL_DINOSAURS_DATA, "boot_files", isoName), os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return nil, fmt.Errorf("opening file: %v", err)
+		}
+		defer file.Close()
+
+		resp, err := http.Get(downloadURL)
+		if err != nil {
+			return nil, fmt.Errorf("downloading ISO: %v", err)
+		}
+		defer resp.Body.Close()
+
+		// copy the downloaded content to the file
+		_, err = io.Copy(file, resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("copying ISO: %v", err)
+		}
+
 		return nil, nil
 	})
 
