@@ -9,7 +9,7 @@ on:
       - "daemon/**"
       - "automation-engine/**"
       - "vm-proxy/**"
-      - ".github/workflows/daemon-release.yml"
+      - ".github/workflows/release.yml"
 
 permissions:
   contents: write
