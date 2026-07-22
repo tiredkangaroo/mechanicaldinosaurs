@@ -1,0 +1,35 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+
+html, body {
+    font-family: 'Playfair Display', serif;
+}
+button {
+    background-color: #6d5000;
+    color: white;
+    border: 0px;
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 6px 12px;
+}
+.error-flash {
+    background-color: #ffcfcc;
+    color: #ff0000;
+    padding: 6px 12px;
+    border-radius: 5px;
+    border: 2px solid #ff0000;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+.status-indicator {
+    display: inline-block;
+    width: 0.8rem;
+    height: 0.8rem;
+}
+
+.status-running {
+    background-color: green;
+}
+
+.status-stopped, .status-exited {
+    background-color: gray;
+}

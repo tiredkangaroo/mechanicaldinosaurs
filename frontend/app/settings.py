@@ -22,20 +22,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-%8k=fmtqrrdia#jm*e=e!+n(!4)-z@=nmbp72_d1w!mc-#o%$j'
+SECRET_KEY = environ.get('SECRET_KEY', 'django-insecure-%8k=fmtqrrdia#jm*e=e!+n(!4)-z@=nmbp72_d1w!mc-#o%$j')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 if DEBUG:
     CSRF_TRUSTED_ORIGINS = [
         "https://localhost:8080",
-        'https://mechanicaldinosaurs.net', 
+        environ.get('CSRF_TRUSTED_ORIGIN', 'https://mechanicaldinosaurs.net'),
     ]
 
 ALLOWED_HOSTS = [
     '.localhost',
     'mechanicaldinosaurs.net',
+    environ.get('ALLOWED_HOST', 'mechanicaldinosaurs.net'),
 ]
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 

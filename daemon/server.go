@@ -191,12 +191,12 @@ func registerVMRoutes(api *echo.Group) {
 			if runtime.GOARCH != "amd64" {
 				return nil, fmt.Errorf("ubuntu-desktop is only available for amd64 architecture")
 			}
-			downloadURL = fmt.Sprintf("https://mirror.pilotfiber.com/ubuntu-iso/%s/ubuntu-%s-desktop-amd64.iso", req.Version)
+			downloadURL = fmt.Sprintf("https://mirror.pilotfiber.com/ubuntu-iso/%s/ubuntu-%s-desktop-amd64.iso", req.Version, req.Version)
 		case "ubuntu-server":
 			if runtime.GOARCH != "amd64" {
 				return nil, fmt.Errorf("ubuntu-server is only available for amd64 architecture")
 			}
-			downloadURL = fmt.Sprintf("https://mirror.pilotfiber.com/ubuntu-iso/%s/ubuntu-%s-live-server-amd64.iso", req.Version)
+			downloadURL = fmt.Sprintf("https://mirror.pilotfiber.com/ubuntu-iso/%s/ubuntu-%s-live-server-amd64.iso", req.Version, req.Version)
 		case "debian":
 			downloadURL = fmt.Sprintf("https://cdimage.debian.org/debian-cd/%s/%s/iso-cd/debian-%s-%s-netinst.iso", req.Version, runtime.GOARCH, req.Version, runtime.GOARCH)
 		}
