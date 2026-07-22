@@ -1,4 +1,4 @@
-name: Build and Release Go Project
+name: Build and Release Daemon, Automation Engine, and VM Proxy
 
 on:
   push:
@@ -7,14 +7,16 @@ on:
       - "go.mod"
       - "go.sum"
       - "daemon/**"
-      - ".github/workflows/go-release.yml"
+      - "automation-engine/**"
+      - "vm-proxy/**"
+      - ".github/workflows/daemon-release.yml"
 
 permissions:
   contents: write
 
 jobs:
   build:
-    name: Build for multiple OS/ARCH
+    name: Build Daemon for multiple OS/ARCH
     runs-on: ubuntu-latest
 
     strategy:
@@ -99,10 +101,65 @@ jobs:
           name: md-daemon-${{ matrix.goos }}-${{ matrix.goarch }}
           path: builds/md-daemon-${{ matrix.goos }}-${{ matrix.goarch }}/*.zip
 
+  build-simple:
+    name: Build ${{ matrix.project }} for multiple OS/ARCH
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        project: [automation-engine, vm-proxy]
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Build and zip ${{ matrix.project }} for ${{ matrix.goos }}/${{ matrix.goarch }}
+        run: |
+          WORKSPACE_ROOT=$(pwd)
+          project="${{ matrix.project }}"
+          build_dir="${WORKSPACE_ROOT}/builds/${project}-${{ matrix.goos }}-${{ matrix.goarch }}"
+          output_name="${project}"
+          renamed_binary="${project}-${{ matrix.goos }}-${{ matrix.goarch }}"
+
+          # Windows binaries need an .exe suffix
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            output_name="${output_name}.exe"
+            renamed_binary="${renamed_binary}.exe"
+          fi
+
+          mkdir -p "$build_dir"
+
+          echo "Building ${project} for ${{ matrix.goos }}/${{ matrix.goarch }}..."
+
+          cd "$project"
+          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o "${build_dir}/${output_name}" .
+
+          cd "$build_dir"
+          mv "$output_name" "$renamed_binary"
+          if [ "${{ matrix.goos }}" != "windows" ]; then
+            chmod +x "$renamed_binary"
+          fi
+
+          zip_name="${project}-${{ matrix.goos }}-${{ matrix.goarch }}.zip"
+          zip "$zip_name" "$renamed_binary"
+
+      - name: Upload zipped build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.project }}-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: builds/${{ matrix.project }}-${{ matrix.goos }}-${{ matrix.goarch }}/*.zip
+
   release:
     name: Create 'latest' GitHub Release
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, build-simple]
 
     steps:
       - name: Checkout code
