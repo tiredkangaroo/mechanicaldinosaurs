@@ -30,7 +30,7 @@ DEBUG = False
 if DEBUG:
     CSRF_TRUSTED_ORIGINS = [
         "https://localhost:8080",
-        environ.get('CSRF_TRUSTED_ORIGIN', 'https://mechanicaldinosaurs.net'),
+        environ.get('CSRF_TRUSTED_ORIGIN', 'https://mechanicaldinosaurs.net')
     ]
 
 ALLOWED_HOSTS = [
