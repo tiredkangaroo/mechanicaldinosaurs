@@ -27,6 +27,10 @@ SECRET_KEY = environ.get('SECRET_KEY', 'django-insecure-%8k=fmtqrrdia#jm*e=e!+n(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
+SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
 # note: remove mech dino defaults
 
 if DEBUG:
