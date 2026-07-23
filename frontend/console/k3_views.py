@@ -288,16 +288,19 @@ def deployment_detail(request, namespace, deployment_name):
 @xframe_options_exempt
 def pod_logs(request, namespace, pod_name):
     def log_generator():
-        log_stream = k3.kube_core_api.read_namespaced_pod_log(
-            name=pod_name,
-            namespace=namespace,
-            follow=True,                # keep conn open
-            tail_lines=100,             # pre-populate with the last 100 log item (possibly have this configure?)
-            _preload_content=False
-        )
+        try:
+            log_stream = k3.kube_core_api.read_namespaced_pod_log(
+                name=pod_name,
+                namespace=namespace,
+                follow=True,                # keep conn open
+                tail_lines=100,             # pre-populate with the last 100 log item (possibly have this configure?)
+                _preload_content=False
+            )
 
-        for chunk in log_stream.stream(amt=1024):
-            yield chunk
+            for chunk in log_stream.stream(amt=1024):
+                yield chunk
+        except Exception as e:
+            yield f"error: {str(e)}"
 
     return StreamingHttpResponse(log_generator(), content_type="text/plain")
 

@@ -33,11 +33,12 @@ def index(request):
     print("getting vms from all machines")
     for machine in machines:
             try:
-                machine.vms = requests.get(f"http://{machine.hostport}/api/vms/list", headers={'Authorization': f'Bearer {machine.secret_key}'}, timeout=(1, 10)).json()
+                machine.vms = requests.get(f"http://{machine.hostport}/api/vms/list", headers={'Authorization': f'Bearer {machine.secret_key}'}, timeout=settings.DEFAULT_TIMEOUT).json()
                 if not getattr(machine.vms, 'error', None): # not err is present
-                    for vm in machine.vms:
-                        vm['machine'] = machine
-                        vms.append(vm)
+                    if machine.vms:
+                        for vm in machine.vms:
+                            vm['machine'] = machine
+                            vms.append(vm)
                 machine.status = "reachable"
             except Exception as e:
                 print(f"error fetching vms for machine {machine.name}: {str(e)}")

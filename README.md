@@ -2,6 +2,10 @@
 
 mechanical dinosaurs manages my infra! this project is split up into a few components.
 
+# video demo!!! (hi reviewer)
+
+<video src="https://bucket.mechanicaldinosaurs.net/md%20demo.mov" />
+
 # components of mechanical dinosaurs
 
 there's a few components of this project that each manage different things.

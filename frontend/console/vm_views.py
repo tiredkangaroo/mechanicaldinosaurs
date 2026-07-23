@@ -23,7 +23,7 @@ def create_vm(request, machine_name):
     machine = None
     try:
         machine = Machine.objects.get(name=machine_name)
-        machine.info = requests.get(f'http://{machine.hostport}/api/info', headers={'Authorization': f'Bearer {machine.secret_key}'}, timeout=(1, 10)).json()
+        machine.info = requests.get(f'http://{machine.hostport}/api/info', headers={'Authorization': f'Bearer {machine.secret_key}'}, timeout=settings.DEFAULT_TIMEOUT).json()
     except Machine.DoesNotExist:
         return HttpResponse("machine not found", status=404)
     except Exception as e:
@@ -52,7 +52,7 @@ def create_vm(request, machine_name):
         except Machine.DoesNotExist:
             return HttpResponse("Machine not found", status=404)
     else:
-        boot_files = requests.get(f"http://{machine.hostport}/api/vms/boot-files", headers={'Authorization': f'Bearer {machine.secret_key}'}, timeout=(1, 10)).json()
+        boot_files = requests.get(f"http://{machine.hostport}/api/vms/boot-files", headers={'Authorization': f'Bearer {machine.secret_key}'}, timeout=settings.DEFAULT_TIMEOUT).json()
         return render(request, 'create_vm.html', {'machine_name': machine_name, 'boot_files': boot_files, 'max_memory_mb': machine.info.get('memory', 0) // 1024 // 1024, 'max_cpus': machine.info.get('cpu_num', 0), 'max_disk_gb': machine.info.get('storage_capacity', 0) // 1024 // 1024 // 1024})
 
 @login_required
@@ -64,7 +64,7 @@ def vm_detail(request, machine_name, vm_name):
         return HttpResponse("machine not found", status=404)
     
     try:
-        vm = requests.get(f"http://{machine.hostport}/api/vms/get?name={vm_name}", headers={'Authorization': f'Bearer {machine.secret_key}'}, timeout=(1, 10)).json()
+        vm = requests.get(f"http://{machine.hostport}/api/vms/get?name={vm_name}", headers={'Authorization': f'Bearer {machine.secret_key}'}, timeout=settings.DEFAULT_TIMEOUT).json()
         if vm.get('error'):
             return HttpResponse(f"error fetching VM details: {vm['error']}", status=503)
     except Exception as e:

@@ -33,6 +33,8 @@ if DEBUG:
         environ.get('CSRF_TRUSTED_ORIGIN', 'https://mechanicaldinosaurs.net')
     ]
 
+DEFAULT_TIMEOUT = (2, 10)
+
 ALLOWED_HOSTS = [
     '.localhost',
     'mechanicaldinosaurs.net',
