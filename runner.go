@@ -201,7 +201,7 @@ func consoleCommand(env []string, consoleDir string) ([]string, error) {
 	// then hand off control directly to Gunicorn via python code.
 	pyScript := fmt.Sprintf(`
 import sys
-from gunicorn.app.wsgiapp import WSGIapplication
+from gunicorn.app.wsgiapp import WSGIApplication
 from whitenoise import WhiteNoise
 
 server = %q
@@ -214,7 +214,7 @@ else:
 
 application = WhiteNoise(base_app, root=static_dir, prefix="/static/")
 
-class StandaloneApplication(WSGIapplication):
+class StandaloneApplication(WSGIApplication):
     def load(self):
         return application
 
