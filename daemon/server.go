@@ -231,11 +231,15 @@ func registerVMRoutes(api *echo.Group) {
 		}
 		defer resp.Body.Close()
 
-		// copy the downloaded content to the file
-		_, err = io.Copy(file, resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("copying ISO: %v", err)
-		}
+		go func() {
+			// copy the downloaded content to the file
+			_, err = io.Copy(file, resp.Body)
+			if err != nil {
+				slog.Error("error copying ISO", "error", err)
+			} else {
+				slog.Info("iso download complete", "file", isoName)
+			}
+		}()
 
 		return nil, nil
 	})
