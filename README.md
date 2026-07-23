@@ -6,6 +6,8 @@ mechanical dinosaurs manages my infra! this project is split up into a few compo
 
 it's [here](https://bucket.mechanicaldinosaurs.net/md%20demo.mov)!
 
+you can also check out the demo [here](https://mechanicaldinosaurs.net) and use account `demo` with password `demo`.
+
 # components of mechanical dinosaurs
 
 there's a few components of this project that each manage different things.
