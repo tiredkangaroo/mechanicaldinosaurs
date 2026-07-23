@@ -229,9 +229,9 @@ func registerVMRoutes(api *echo.Group) {
 		if err != nil {
 			return nil, fmt.Errorf("downloading ISO: %v", err)
 		}
-		defer resp.Body.Close()
 
-		go func() {
+		go func(resp *http.Response) {
+			defer resp.Body.Close()
 			// copy the downloaded content to the file
 			_, err = io.Copy(file, resp.Body)
 			if err != nil {
@@ -239,7 +239,7 @@ func registerVMRoutes(api *echo.Group) {
 			} else {
 				slog.Info("iso download complete", "file", isoName)
 			}
-		}()
+		}(resp)
 
 		return nil, nil
 	})
