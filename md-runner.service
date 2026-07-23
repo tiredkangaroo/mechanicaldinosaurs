@@ -1,0 +1,11 @@
+[Unit]
+Description=md runner (runs console, automation-engine, vm-proxy components)
+After=network.target
+
+[Service]
+ExecStart=/home/admin/mechanicaldinosaurs/runner
+WorkingDirectory=/home/admin/mechanicaldinosaurs
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

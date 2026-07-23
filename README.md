@@ -2,11 +2,15 @@
 
 mechanical dinosaurs manages my infra! this project is split up into a few components.
 
-# video demo!!! (hi reviewer)
+# hi reviewer!!
+
+#### video demo
 
 it's [here](https://bucket.mechanicaldinosaurs.net/md%20demo.mov)!
 
-you can also check out the demo [here](https://mechanicaldinosaurs.net) and use account `demo` with password `demo`.
+#### web demo + account
+
+you can also check out the demo [here](https://mechanicaldinosaurs.net). to sign in, set the username to the program you're reviewing for (lowercase), and the password to "demo".
 
 # components of mechanical dinosaurs
 
@@ -66,6 +70,10 @@ the VM proxy is a raw TCP proxy. it will sit on the same network as the machines
 
 proxies HTTP port 8000 as HTTPS port 8080 given a local server.crt and server.key file are available. this is just bc i was too lazy to figure out nginx. this isn't a real component lol.
 
+## honorable mention pt. 2: runner
+
+standalone golang file that runs the console, automation engine, and vm proxy all in one go for production.
+
 # setup!
 
 ## console & database
@@ -75,6 +83,10 @@ proxies HTTP port 8000 as HTTPS port 8080 given a local server.crt and server.ke
 - set the environment variables. see .env.example
 
 - get the k3s-config.yaml and copy it over to the frontend folder.
+
+- create a superuser using python manage.py createsuperuser
+
+- move static using python manage.py collectstatic
 
 - run the console using python manage.py startproject (when working directory is frontend/console)
 

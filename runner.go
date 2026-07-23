@@ -65,18 +65,11 @@ type component struct {
 }
 
 func main() {
-	root := getenv("MD_ROOT", mustGetwd())
+	// Load the merged environment (.env file + process env) first so that runner variables
+	// (like MD_ROOT, CONSOLE_PYTHON, etc.) defined inside .env are accessible.
+	env := loadRunnerEnv()
 
-	envFile := getenv("MD_ENV_FILE", filepath.Join(root, ".env"))
-	fileEnv, err := loadEnvFile(envFile)
-	if err != nil {
-		if os.IsNotExist(err) {
-			logf("runner", "no env file at %s, continuing with the process environment only", envFile)
-		} else {
-			fatalf("runner", "reading env file %s: %v", envFile, err)
-		}
-	}
-	env := mergeEnv(os.Environ(), fileEnv)
+	root := lookupEnvOr(env, "MD_ROOT", mustGetwd())
 
 	// Check for "run-migrations" subcommand
 	if len(os.Args) > 1 && os.Args[1] == "run-migrations" {
@@ -99,6 +92,24 @@ func main() {
 	if err := runAll(ctx, components, env, grace); err != nil {
 		fatalf("runner", "%v", err)
 	}
+}
+
+// loadRunnerEnv resolves MD_ROOT, MD_ENV_FILE, and merges the .env file with os.Environ().
+// Process environment variables still take priority over variables defined in .env.
+func loadRunnerEnv() []string {
+	root := getenv("MD_ROOT", mustGetwd())
+	envFile := getenv("MD_ENV_FILE", filepath.Join(root, ".env"))
+
+	fileEnv, err := loadEnvFile(envFile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			logf("runner", "no env file at %s, continuing with the process environment only", envFile)
+		} else {
+			fatalf("runner", "reading env file %s: %v", envFile, err)
+		}
+	}
+
+	return mergeEnv(os.Environ(), fileEnv)
 }
 
 // executeRunMigrationsSubcommand compiles django SQL migrations and applies them to PostgreSQL via DATABASE_URL.
@@ -153,7 +164,7 @@ func executeRunMigrationsSubcommand(root string, env []string) error {
 // buildComponents assembles the three components (console, automation engine, vm proxy) using the
 // merged environment for configuration.
 func buildComponents(root string, env []string) ([]component, error) {
-	consoleDir := filepath.Join(root, getenv("CONSOLE_DIR", "frontend"))
+	consoleDir := filepath.Join(root, lookupEnvOr(env, "CONSOLE_DIR", "frontend"))
 	if _, err := os.Stat(consoleDir); err != nil {
 		return nil, fmt.Errorf("console directory %s: %w", consoleDir, err)
 	}
@@ -163,8 +174,8 @@ func buildComponents(root string, env []string) ([]component, error) {
 		return nil, err
 	}
 
-	automationBin := absPath(root, getenv("AUTOMATION_ENGINE_BIN", "./automation-engine"))
-	vmProxyBin := absPath(root, getenv("VM_PROXY_BIN", "./vm-proxy"))
+	automationBin := absPath(root, lookupEnvOr(env, "AUTOMATION_ENGINE_BIN", "./automation-engine"))
+	vmProxyBin := absPath(root, lookupEnvOr(env, "VM_PROXY_BIN", "./vm-proxy"))
 
 	for _, bin := range []string{automationBin, vmProxyBin} {
 		if _, err := os.Stat(bin); err != nil {
