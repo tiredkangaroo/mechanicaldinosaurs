@@ -1,0 +1,6 @@
+# hard reqs bc y not
+
+django == 6.0.6
+django-passkeys == 2.1
+kubernutes == 36.0.2
+resend == 2.32.2

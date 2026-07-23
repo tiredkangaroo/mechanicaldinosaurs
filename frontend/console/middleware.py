@@ -27,6 +27,7 @@ from .models import AuditLog
 from django.contrib.auth.models import User
 import json
 
+# this is basically just a request logger :sob:
 class AuditLoggerMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response 
