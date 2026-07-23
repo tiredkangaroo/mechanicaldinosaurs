@@ -74,6 +74,8 @@ proxies HTTP port 8000 as HTTPS port 8080 given a local server.crt and server.ke
 
 - set the environment variables. see .env.example
 
+- get the k3s-config.yaml and copy it over to the frontend folder.
+
 - run the console using python manage.py startproject (when working directory is frontend/console)
 
 ## machine
