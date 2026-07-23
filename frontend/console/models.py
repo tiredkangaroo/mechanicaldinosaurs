@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 # Create your models here.
 class Machine(models.Model):
@@ -33,6 +34,16 @@ class Deployment(models.Model):
 class Automation(models.Model):
     automation_id = models.CharField(max_length=36, primary_key=True)
     json_data = models.JSONField() # automationcommunicable (automation_engine/automation.go:130, symbol: AutomationCommunicable)
+
+class AuditLog(models.Model):
+    action = models.CharField(max_length=256)
+    detail = models.TextField()
+    ipaddr = models.CharField(max_length=1024)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True)
+
+    def __str__(self):
+        return f"{self.action} from {self.ipaddr} at {self.timestamp} by {self.user}"
 
 # class Automation(models.Model):
 #     automation_id = models.CharField(max_length=36, primary_key=True)

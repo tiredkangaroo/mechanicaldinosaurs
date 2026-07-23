@@ -1,6 +1,6 @@
 from django.shortcuts import render, HttpResponse, redirect, reverse
 from django.http import StreamingHttpResponse
-from .models import Machine, VMSession, Automation
+from .models import Machine, VMSession, Automation, AuditLog
 import requests, math, uuid, socket, urllib3
 from dateutil import parser 
 from django.contrib.auth.decorators import login_required

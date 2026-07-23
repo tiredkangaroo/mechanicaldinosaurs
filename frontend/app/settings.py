@@ -27,6 +27,8 @@ SECRET_KEY = environ.get('SECRET_KEY', 'django-insecure-%8k=fmtqrrdia#jm*e=e!+n(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
+# note: remove mech dino defaults
+
 if DEBUG:
     CSRF_TRUSTED_ORIGINS = [
         "https://localhost:8080",
@@ -73,7 +75,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # 'console.middleware.SubdomainMiddleware'
+    'console.middleware.AuditLoggerMiddleware'
 ]
 
 ROOT_URLCONF = 'app.urls'
