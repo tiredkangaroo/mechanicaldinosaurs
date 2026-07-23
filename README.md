@@ -4,7 +4,9 @@ mechanical dinosaurs manages my infra! this project is split up into a few compo
 
 # video demo!!! (hi reviewer)
 
-<video src="https://bucket.mechanicaldinosaurs.net/md%20demo.mov" />
+<video width="320" height="240" controls>
+ <source src="https://bucket.mechanicaldinosaurs.net/md%20demo.mov" type="video/mp4">
+</video>
 
 # components of mechanical dinosaurs
 
