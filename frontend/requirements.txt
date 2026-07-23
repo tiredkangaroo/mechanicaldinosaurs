@@ -5,3 +5,4 @@ django-passkeys == 2.1
 kubernetes == 36.0.2
 resend == 2.32.2
 gunicorn == 26.0.0
+psycopg2 == 2.9.12
