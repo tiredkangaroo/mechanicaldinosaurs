@@ -34,7 +34,7 @@ for filepath in "$MIGRATION_DIR"/[0-9]*.py; do
   echo -e "-- ========================================\n" >> "$OUTPUT_FILE"
 
   # Run sqlmigrate and append output
-  python frontend/manage.py sqlmigrate console "$filename" >> "$OUTPUT_FILE"
+  $CONSOLE_PYTHON frontend/manage.py sqlmigrate console "$filename" >> "$OUTPUT_FILE"
 done
 
 echo -e "\nDone! All SQL statements compiled into '$OUTPUT_FILE'."
