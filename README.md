@@ -10,7 +10,7 @@ it's [here](https://bucket.mechanicaldinosaurs.net/md%20demo.mov)!
 
 #### web demo + account
 
-you can also check out the demo [here](https://mechanicaldinosaurs.net). to sign in, set the username to the program you're reviewing for (lowercase), and the password to "demo".
+you can also check out the demo [here](https://mechanicaldinosaurs.net). to sign in, set the username to the program you're reviewing for (lowercase), and the password to "demo1234".
 
 # components of mechanical dinosaurs
 
