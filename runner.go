@@ -195,9 +195,13 @@ func consoleCommand(env []string, consoleDir string) ([]string, error) {
 		staticDir = filepath.Join(consoleDir, staticDir)
 	}
 
-	// Python wrapper to mount WhiteNoise dynamically onto the application at /static
-	pythonInlineWrapper := fmt.Sprintf(`
-import os
+	python := lookupEnvOr(env, "CONSOLE_PYTHON", "python3")
+
+	// We launch python directly to load WhiteNoise and wrap the application,
+	// then hand off control directly to Gunicorn via python code.
+	pyScript := fmt.Sprintf(`
+import sys
+from gunicorn.app.wsgiapp import WSGIapplication
 from whitenoise import WhiteNoise
 
 server = %q
@@ -209,29 +213,26 @@ else:
     from app.wsgi import application as base_app
 
 application = WhiteNoise(base_app, root=static_dir, prefix="/static/")
-`, server, staticDir)
 
-	switch server {
-	case "wsgi":
-		return []string{
-			"gunicorn",
-			"--bind", bind,
-			"--workers", workers,
-			"-c", "python:exec(" + fmt.Sprintf("%q", pythonInlineWrapper) + ")",
-			"application",
-		}, nil
-	case "asgi":
-		return []string{
-			"gunicorn",
-			"-k", "uvicorn.workers.UvicornWorker",
-			"--bind", bind,
-			"--workers", workers,
-			"-c", "python:exec(" + fmt.Sprintf("%q", pythonInlineWrapper) + ")",
-			"application",
-		}, nil
-	default:
-		return nil, fmt.Errorf("unknown CONSOLE_SERVER %q, expected \"wsgi\" or \"asgi\"", server)
-	}
+class StandaloneApplication(WSGIapplication):
+    def load(self):
+        return application
+
+sys.argv = [
+    "gunicorn",
+    "--bind", %q,
+    "--workers", %q,
+]
+if server == "asgi":
+    sys.argv.extend(["-k", "uvicorn.workers.UvicornWorker"])
+
+sys.argv.append("application")
+StandaloneApplication().run()
+`, server, staticDir, bind, workers)
+
+	return []string{
+		python, "-c", pyScript,
+	}, nil
 }
 
 // runAll starts every component, streams their output with a name prefix, and blocks until either
