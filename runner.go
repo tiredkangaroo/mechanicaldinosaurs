@@ -35,27 +35,27 @@ import (
 // sensible defaults.
 //
 //   MD_ROOT                working directory that contains "frontend", "automation-engine", and
-//                           "vm-proxy" (default: the runner's own working directory)
-//   MD_ENV_FILE             path to the env file to load (default: "<MD_ROOT>/.env")
+//                          "vm-proxy" (default: the runner's own working directory)
+//   MD_ENV_FILE            path to the env file to load (default: "<MD_ROOT>/.env")
 //
-//   CONSOLE_DIR             directory of the django project, relative to MD_ROOT (default: "frontend")
-//   CONSOLE_CMD             full shell command used to start the console. overrides everything
-//                           below. use this to switch to an ASGI server (uvicorn/daphne) or to a
-//                           different WSGI server entirely.
-//   CONSOLE_SERVER          "wsgi" or "asgi" (default: "wsgi")
-//   CONSOLE_BIND            host:port to bind the console server to (default: "0.0.0.0:8000")
-//   CONSOLE_WORKERS         number of worker processes for gunicorn/uvicorn (default: "3")
-//   CONSOLE_PYTHON          python interpreter used to run manage.py and (if CONSOLE_MIGRATE is
-//                           set) migrations (default: "python3")
-//   CONSOLE_MIGRATE         if "true", run "manage.py migrate --noinput" before starting the server
-//                           (default: "false")
+//   CONSOLE_DIR            directory of the django project, relative to MD_ROOT (default: "frontend")
+//   CONSOLE_CMD            full shell command used to start the console. overrides everything
+//                          below. use this to switch to an ASGI server (uvicorn/daphne) or to a
+//                          different WSGI server entirely.
+//   CONSOLE_SERVER         "wsgi" or "asgi" (default: "wsgi")
+//   CONSOLE_BIND           host:port to bind the console server to (default: "0.0.0.0:8000")
+//   CONSOLE_WORKERS        number of worker processes for gunicorn/uvicorn (default: "3")
+//   CONSOLE_PYTHON         python interpreter used to run manage.py and (if CONSOLE_MIGRATE is
+//                          set) migrations (default: "python3")
+//   CONSOLE_MIGRATE        if "true", run "manage.py migrate --noinput" before starting the server
+//                          (default: "false")
 //
-//   AUTOMATION_ENGINE_BIN   path to the automation-engine binary, relative to MD_ROOT
-//                           (default: "./automation-engine")
-//   VM_PROXY_BIN            path to the vm-proxy binary, relative to MD_ROOT (default: "./vm-proxy")
+//   AUTOMATION_ENGINE_BIN  path to the automation-engine binary, relative to MD_ROOT
+//                          (default: "./automation-engine")
+//   VM_PROXY_BIN           path to the vm-proxy binary, relative to MD_ROOT (default: "./vm-proxy")
 //
-//   MD_SHUTDOWN_GRACE       how long to wait after SIGTERM before force-killing a still-running
-//                           component, e.g. "10s" (default: "10s")
+//   MD_SHUTDOWN_GRACE      how long to wait after SIGTERM before force-killing a still-running
+//                          component, e.g. "10s" (default: "10s")
 
 // component is a single long running process managed by the runner.
 type component struct {
@@ -78,6 +78,14 @@ func main() {
 	}
 	env := mergeEnv(os.Environ(), fileEnv)
 
+	// Check for "run-migrations" subcommand
+	if len(os.Args) > 1 && os.Args[1] == "run-migrations" {
+		if err := executeRunMigrationsSubcommand(root, env); err != nil {
+			fatalf("runner", "%v", err)
+		}
+		return
+	}
+
 	components, err := buildComponents(root, env)
 	if err != nil {
 		fatalf("runner", "%v", err)
@@ -91,6 +99,55 @@ func main() {
 	if err := runAll(ctx, components, env, grace); err != nil {
 		fatalf("runner", "%v", err)
 	}
+}
+
+// executeRunMigrationsSubcommand compiles django SQL migrations and applies them to PostgreSQL via DATABASE_URL.
+func executeRunMigrationsSubcommand(root string, env []string) error {
+	logf("migrations", "starting compilation and execution of migrations")
+
+	// 1. Run ./compile_django_sql.sh
+	compileScript := filepath.Join(root, "compile_django_sql.sh")
+	if _, err := os.Stat(compileScript); err != nil {
+		return fmt.Errorf("compile script not found at %s: %w", compileScript, err)
+	}
+
+	logf("migrations", "running %s", compileScript)
+	compileCmd := exec.Command(compileScript)
+	compileCmd.Dir = root
+	compileCmd.Env = env
+	compileCmd.Stdout = newPrefixWriter(os.Stdout, "compile-sql")
+	compileCmd.Stderr = newPrefixWriter(os.Stderr, "compile-sql")
+
+	if err := compileCmd.Run(); err != nil {
+		return fmt.Errorf("failed executing compile script: %w", err)
+	}
+
+	// 2. Validate DATABASE_URL exists in env
+	dbURL := lookupEnv(env, "DATABASE_URL")
+	if dbURL == "" {
+		return fmt.Errorf("DATABASE_URL is not set in environment or .env file")
+	}
+
+	// 3. Ensure all_migrations.sql exists
+	sqlFile := filepath.Join(root, "all_migrations.sql")
+	if _, err := os.Stat(sqlFile); err != nil {
+		return fmt.Errorf("migration SQL file not found at %s: %w", sqlFile, err)
+	}
+
+	// 4. Run all_migrations.sql on postgres using psql
+	logf("migrations", "applying %s to postgres database", sqlFile)
+	psqlCmd := exec.Command("psql", dbURL, "-f", sqlFile)
+	psqlCmd.Dir = root
+	psqlCmd.Env = env
+	psqlCmd.Stdout = newPrefixWriter(os.Stdout, "psql")
+	psqlCmd.Stderr = newPrefixWriter(os.Stderr, "psql")
+
+	if err := psqlCmd.Run(); err != nil {
+		return fmt.Errorf("failed executing psql migration script: %w", err)
+	}
+
+	logf("migrations", "successfully completed migrations")
+	return nil
 }
 
 // buildComponents assembles the three components (console, automation engine, vm proxy) using the
