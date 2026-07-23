@@ -41,7 +41,6 @@ class AuditLoggerMiddleware:
         u = request.user
         if not isinstance(u, User):
             u = None
-        print(request.headers, request.body)
         new_log = AuditLog(action=f"{request.method} {request.path}", detail=detail, ipaddr=request.environ["REMOTE_ADDR"], user=u)
         new_log.save()
         return self.get_response(request)

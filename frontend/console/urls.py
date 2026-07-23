@@ -28,6 +28,7 @@ urlpatterns = [
     path("machine/<str:machine_name>/vms/<str:vm_name>/delete", vm_views.vm_delete, name="vm_delete"),
     path("machine/<str:machine_name>/vms/<str:vm_name>/connect", vm_views.vm_connect, name="vm_connect"),
     path("machine/<str:machine_name>/vms/<str:vm_name>/<str:session_id>/disconnect", vm_views.vm_disconnect, name="vm_disconnect"), 
+    path("machine/<str:machine_name>/download-iso", vm_views.download_iso, name="download_iso"),
 
     path('k3/deploy/', k3_views.deploy, name='deploy'),
     path('k3/deployments/<str:namespace>/<str:deployment_name>/', k3_views.deployment_detail, name='deployment_detail'),

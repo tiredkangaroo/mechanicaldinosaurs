@@ -207,7 +207,7 @@ var DeleteVMRequest = StaticRequestInfo[VMTargetReq, struct{}]{
 }
 
 var DownloadISORequest = StaticRequestInfo[DownloadISOReq, struct{}]{
-	Method: "GET",
+	Method: "POST",
 	Path:   "/api/vms/download-iso",
 }
 

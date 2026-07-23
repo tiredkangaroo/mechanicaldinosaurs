@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'root.css' %}" />
+    <title>Download ISO</title>
+  </head>
+  <body>
+    <h1>Download ISO</h1>
+
+    <form method="POST" action="{% url 'download_iso' machine.name %}">
+      {% csrf_token %}
+      <div>
+        <label for="url-input"
+          >URL:
+          <input
+            type="text"
+            id="url-input"
+            name="url"
+            autofocus
+            placeholder="https://mirrors.lug.mtu.edu/debian-cd/13.6.0/arm64/iso-cd/debian-13.6.0-arm64-netinst.iso"
+            style="padding: 10px 4px; margin: 10px; width: 50%"
+        /></label>
+      </div>
+      <button type="submit" style="margin-top: 10px">download</button>
+    </form>
+  </body>
+  <!-- <body>
+    <h1>Download ISO</h1>
+
+    <form method="POST" action="{% url 'download_iso' machine.name %}">
+      {% csrf_token %}
+      <div>
+        <input
+          type="radio"
+          name="how"
+          id="pre-selected-os"
+          value="pre-selected-os"
+          onchange="handleHowChange()"
+          checked
+        />
+        <label for="pre-selected-os"> Pick an OS </label>
+        <input type="radio" name="how" id="custom-url" value="custom-url" onchange="handleHowChange()" />
+        <label for="custom-url"> Custom URL </label>
+      </div>
+      <div id="preselected-input" name="o">
+        <select id="os-input">
+          <option value="ubuntu">Ubuntu</option>
+          <option value="debian">Debian</option>
+        </select>
+        <input type="text" id="os-version-input" placeholder="version" />
+      </div>
+      <input
+        type="url"
+        name="url"
+        id="url-input"
+        placeholder="Enter the URL of the ISO to download"
+        style="display: none"
+      />
+      <button type="submit">Download</button>
+    </form>
+  </body>
+  <script>
+    function handleHowChange() {
+      const preSelectedOs = document.getElementById("pre-selected-os");
+      const customUrl = document.getElementById("custom-url");
+      const urlInput = document.getElementById("url-input");
+      const preselectedInput = document.getElementById("preselected-input");
+
+      if (preSelectedOs.checked) {
+        urlInput.style.display = "none";
+        preselectedInput.style.display = "block";
+      } else if (customUrl.checked) {
+        urlInput.style.display = "block";
+        preselectedInput.style.display = "none";
+      }
+    }
+  </script> -->
+</html>

@@ -207,3 +207,24 @@ def disconnect_session(session_id):
         print("connection refused: disconnect service is not running??")
     except Exception as e:
         print(f"unexpected error occurred: {e}")
+
+def download_iso(request, machine_name):
+    machine = None    
+    try:
+        machine = Machine.objects.get(name=machine_name)
+    except Exception as e:
+        return HttpResponse(f"error fetching machine: {str(e)}", status=503)
+    
+    if request.method == 'POST':
+        url = request.POST.get('url')
+        if not url:
+            return HttpResponse("URL is required", status=400)
+        
+        try:
+            resp = requests.post(f"http://{machine.hostport}/api/vms/download-iso", headers={"Content-Type": "application/json", "Authorization": "Bearer " + machine.secret_key}, json={"url": url})
+            if resp.status_code != 200:
+                return HttpResponse(f"download iso error: {resp.text}", status=504)
+        except Exception as e:
+            return HttpResponse(f"error downloading ISO: {str(e)}", status=500)
+
+    return render(request, 'download_iso.html', {"machine": machine})
