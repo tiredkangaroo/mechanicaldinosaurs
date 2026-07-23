@@ -219,7 +219,8 @@ func registerVMRoutes(api *echo.Group) {
 			isoName = fmt.Sprintf("%s-%s.iso", req.OSName, req.Version)
 		}
 
-		file, err := os.OpenFile(filepath.Join(MECHANICAL_DINOSAURS_DATA, "boot_files", isoName), os.O_CREATE|os.O_WRONLY, 0644)
+		fn := filepath.Join(MECHANICAL_DINOSAURS_DATA, "boot_files", isoName)
+		file, err := os.OpenFile(fn, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			return nil, fmt.Errorf("opening file: %v", err)
 		}
@@ -227,6 +228,7 @@ func registerVMRoutes(api *echo.Group) {
 
 		resp, err := http.Get(downloadURL)
 		if err != nil {
+			os.Remove(fn)
 			return nil, fmt.Errorf("downloading ISO: %v", err)
 		}
 
@@ -236,6 +238,7 @@ func registerVMRoutes(api *echo.Group) {
 			_, err = io.Copy(file, resp.Body)
 			if err != nil {
 				slog.Error("error copying ISO", "error", err)
+				os.Remove(fn)
 			} else {
 				slog.Info("iso download complete", "file", isoName)
 			}
