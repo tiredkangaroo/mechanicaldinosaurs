@@ -200,3 +200,14 @@ write this (you will need root!) to `/etc/systemd/system/md-vm-proxy.service`
 
 use systemctl to enable the service
 `sudo systemctl enable md-vm-proxy.service --now`
+
+# ai declaration
+
+here's the specific things i used ai for:
+
+- [this function](https://github.com/tiredkangaroo/mechanicaldinosaurs/blob/44c93dbfbb2b4cec2b226f7a7be1e4d5780d08e6/daemon/server.go#L36)
+- [most of this file](https://github.com/tiredkangaroo/mechanicaldinosaurs/blob/44c93dbfbb2b4cec2b226f7a7be1e4d5780d08e6/frontend/console/templates/automation_detail.html) (mainly structure)
+- [color styling](https://github.com/tiredkangaroo/mechanicaldinosaurs/blob/44c93dbfbb2b4cec2b226f7a7be1e4d5780d08e6/frontend/console/templates/index.html#L280)
+- [a lot of this file](https://github.com/tiredkangaroo/mechanicaldinosaurs/blob/44c93dbfbb2b4cec2b226f7a7be1e4d5780d08e6/frontend/console/templates/tunnels.html)
+
+i also used it for fixing perm issues on my machines, however, that's not part of my code. all ai usage in the code was marked with a comment. everything else was made by me :p
