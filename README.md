@@ -12,6 +12,8 @@ it's [here](https://bucket.mechanicaldinosaurs.net/md%20demo.mov)!
 
 you can also check out the demo [here](https://mechanicaldinosaurs.net). to sign in, set the username to the program you're reviewing for (lowercase), and the password to "demo1234".
 
+if you want to test out the vm display output with the demo, the demo has a tcp tunnel located at vm-proxy.mechanicaldinosaurs.net. use `cloudflared access tcp --hostname vm-proxy.mechanicaldinosaurs.net --url localhost:3831` and use localhost:3831 as the VNC/SPICE server. you can't access it directly because the vm-proxy tunnel wraps the underlying tcp connection in websockets.
+
 # components of mechanical dinosaurs
 
 there's a few components of this project that each manage different things.
@@ -139,6 +141,8 @@ Environment=KEY2=VALUE2
 [Install]
 WantedBy=multi-user.target
 ```
+
+you might want to consider adding User and Group settings to run it as a non-root user and add give that user perms to the libvirt group with `sudo usermod -aG libvirt your_username`. you also need to make sure the libvirt user can access the data folder with rwx.
 
 write this (you will need root!) to `/etc/systemd/system/md.service`
 
