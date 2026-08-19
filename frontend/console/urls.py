@@ -6,6 +6,7 @@ from . import vm_views
 from . import k3_views
 from . import automation_views
 from . import tunnels_views
+from . import shell_views
 
 urlpatterns = [
     path('', views.index, name='index'),
@@ -29,6 +30,8 @@ urlpatterns = [
     path("machine/<str:machine_name>/vms/<str:vm_name>/connect", vm_views.vm_connect, name="vm_connect"),
     path("machine/<str:machine_name>/vms/<str:vm_name>/<str:session_id>/disconnect", vm_views.vm_disconnect, name="vm_disconnect"), 
     path("machine/<str:machine_name>/download-iso", vm_views.download_iso, name="download_iso"),
+
+    path("machine/<str:machine_name>/shell", shell_views.shell, name="shell"),
 
     path('k3/deploy/', k3_views.deploy, name='deploy'),
     path('k3/deployments/<str:namespace>/<str:deployment_name>/', k3_views.deployment_detail, name='deployment_detail'),

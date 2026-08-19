@@ -16,6 +16,7 @@ class ProxySession(models.Model):
     proxy_url = models.CharField(max_length=512)
     claimed = models.BooleanField(default=False)
     claimed_by = models.CharField(max_length=256, null=True, blank=True)
+    initial_req_is_http = models.BooleanField(default=True) # if the initial request to the proxy will be an HTTP request (as opposed to just a raw TCP connection)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

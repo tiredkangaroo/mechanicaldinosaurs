@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -76,9 +77,10 @@ func handleConnection(clientConn net.Conn) {
 
 	var proxyURL, hostport, secretKey, sessionID string
 	var createdAt time.Time
+	var initialReqIsHTTP bool
 
 	query := `
-	SELECT s.session_id, s.proxy_url, s.created_at, m.hostport, m.secret_key
+	SELECT s.session_id, s.proxy_url, s.created_at, s.initial_req_is_http, m.hostport, m.secret_key
 		FROM console_proxysession s
 		JOIN console_machine m ON s.machine_id = m.name
 		WHERE s.claimed = FALSE
@@ -86,7 +88,7 @@ func handleConnection(clientConn net.Conn) {
 		LIMIT 1	
 	`
 
-	err := conn.QueryRow(context.Background(), query).Scan(&sessionID, &proxyURL, &createdAt, &hostport, &secretKey)
+	err := conn.QueryRow(context.Background(), query).Scan(&sessionID, &proxyURL, &createdAt, &initialReqIsHTTP, &hostport, &secretKey)
 	if err == pgx.ErrNoRows {
 		log.Printf("unauthorized: no active sessions found in database")
 		return
@@ -123,12 +125,26 @@ func handleConnection(clientConn net.Conn) {
 	defer daemonConn.Close()
 
 	reqURL := fmt.Sprintf("%s", proxyURL)
-	req, err := http.NewRequest("GET", reqURL, nil)
-	if err != nil {
-		log.Printf("failed to create request: %v", err)
-		return
-	}
+	// if the initial data from the client that connected to us is an http req, we should fwd while adding auth + changing the host header to the daemon
+	// if it's not, we should just do the regular new request to the daemon
 
+	var req *http.Request
+	if initialReqIsHTTP { // pull req from clientConn and forward it to daemonConn with auth header and host header set to daemon
+		req, err = http.ReadRequest(bufio.NewReader(clientConn))
+		if err != nil {
+			log.Printf("failed to read initial HTTP request: %v", err)
+			return
+		}
+	} else { // create a new GET request to the daemon with auth header and host header set to daemon
+		req, err = http.NewRequest("GET", reqURL, nil)
+		if err != nil {
+			log.Printf("failed to create request: %v", err)
+			return
+		}
+	}
+	req.URL.Scheme = "http"
+	req.URL.Host = hostport
+	req.Host = hostport
 	req.Header.Set("Authorization", "Bearer "+secretKey)
 	if err := req.Write(daemonConn); err != nil {
 		log.Printf("failed to write request: %v", err)

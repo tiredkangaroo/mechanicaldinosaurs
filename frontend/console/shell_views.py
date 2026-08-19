@@ -1,12 +1,16 @@
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
-from .models import Machine
+from .models import Machine, ProxySession
 import hashlib
 import hmac
 import time
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from os import environ
+import uuid
+
+proxy_hostport = environ.get("PROXY_HOSTPORT")
 
 @login_required
 def shell(request, machine_name):
@@ -15,22 +19,29 @@ def shell(request, machine_name):
     except Machine.DoesNotExist:
         return HttpResponse("machine not found", status=404)
     
-    # get a derived key for signing purposes
-    hkdf = HKDF(
-        algorithm=hashes.SHA256(),
-        length=32,
-        salt=None,
-        info=info,
-    )
-    derived_secret_key = hkdf.derive(machine.secret_key)
+    # # get a derived key for signing purposes
+    # hkdf = HKDF(
+    #     algorithm=hashes.SHA256(),
+    #     length=32,
+    #     salt=None,
+    #     info=info,
+    # )
+    # derived_secret_key = hkdf.derive(machine.secret_key)
 
-    # sin a timestamp (get it bc sin -> sine and sine is pronounced the same is sign hahahahahahahahahahaahhahahahahahahaha)
-    timestamp = int(time.time())
-    derived_key = derive_key(master_secret)
-    payload = str(timestamp).encode("utf-8")
-    signature = hmac.new(derived_key, payload, hashlib.sha256).hexdigest()
+    # # sin a timestamp (get it bc sin -> sine and sine is pronounced the same is sign hahahahahahahahahahaahhahahahahahahaha)
+    # timestamp = int(time.time())
+    # derived_key = derive_key(master_secret)
+    # payload = str(timestamp).encode("utf-8")
+    # signature = hmac.new(derived_key, payload, hashlib.sha256).hexdigest()
 
-    # [timestamp]-[signature] token, will be split by "-"
-    token = f"{str(timestamp)}-{signature}"
+    # # [timestamp]-[signature] token, will be split by "-"
+    # token = f"{str(timestamp)}-{signature}"
 
-    return render(request, 'shell.html', {})
+    # create a proxy session that will be claimed by the frontend
+    sessionUUID = str(uuid.uuid4())
+    proxy_url = f"http://{machine.hostport}/api/shell" # proxy to the machine's shell endpoint
+    ProxySession(proxy_url=proxy_url, machine=machine, session_id=sessionUUID, initial_req_is_http=True).save()
+
+    return render(request, 'shell.html', {
+        "proxy_hostport": proxy_hostport,
+    })

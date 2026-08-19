@@ -13,9 +13,9 @@ from django.conf import settings
 import resend
 from django.views.decorators.clickjacking import xframe_options_exempt
 
-vm_proxy_disconnect_host = environ.get("VM_PROXY_DISCONNECT_HOST")
-vm_proxy_disconnect_port = environ.get("VM_PROXY_DISCONNECT_PORT")
-vm_proxy_disconnect_secret = environ.get("VM_PROXY_DISCONNECT_SECRET")
+vm_proxy_disconnect_host = environ.get("PROXY_DISCONNECT_HOST")
+vm_proxy_disconnect_port = environ.get("PROXY_DISCONNECT_PORT")
+vm_proxy_disconnect_secret = environ.get("PROXY_DISCONNECT_SECRET")
 
 
 @login_required
@@ -166,7 +166,7 @@ def vm_connect(request, machine_name, vm_name):
     sessionUUID = str(uuid.uuid4())
     session = None
     try:
-        ProxySession(proxy_url=proxy_url_for_vm(machine, vm_name), machine=machine, session_id=sessionUUID).save()
+        ProxySession(proxy_url=proxy_url_for_vm(machine, vm_name), machine=machine, session_id=sessionUUID, initial_req_is_http=False).save()
     except Exception as e:
         return HttpResponse(f"error creating session: {str(e)}", status=503)
     
