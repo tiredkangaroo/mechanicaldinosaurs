@@ -46,7 +46,6 @@ get the windows virtio drivers here: https://fedorapeople.org/groups/virt/virtio
 
 - be able to modify ingress/tunnel routing on the web page
 - secure connections (using custom certs?) from machines
-- add audit logging
 - add a container registry (and auto redeploy when an image is updated)
 
 ## medium

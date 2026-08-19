@@ -209,5 +209,6 @@ here's the specific things i used ai for:
 - [most of this file](https://github.com/tiredkangaroo/mechanicaldinosaurs/blob/44c93dbfbb2b4cec2b226f7a7be1e4d5780d08e6/frontend/console/templates/automation_detail.html) (mainly structure)
 - [color styling](https://github.com/tiredkangaroo/mechanicaldinosaurs/blob/44c93dbfbb2b4cec2b226f7a7be1e4d5780d08e6/frontend/console/templates/index.html#L280)
 - [a lot of this file](https://github.com/tiredkangaroo/mechanicaldinosaurs/blob/44c93dbfbb2b4cec2b226f7a7be1e4d5780d08e6/frontend/console/templates/tunnels.html)
+- [nearly the entirety of the runner](https://github.com/tiredkangaroo/mechanicaldinosaurs/blob/b6c788a78060de4a603eb4769cfe2d4b38803244/runner.go)
 
 i also used it for fixing perm issues on my machines, however, that's not part of my code. all ai usage in the code was marked with a comment. everything else was made by me :p

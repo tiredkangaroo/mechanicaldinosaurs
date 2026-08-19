@@ -78,6 +78,7 @@ func main() {
 		return &res, nil
 	})
 
+	registerShellRoutes(api)
 	registerVMRoutes(api)
 	registerTunnelRoutes(api)
 

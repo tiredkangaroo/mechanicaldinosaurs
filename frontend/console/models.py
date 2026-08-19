@@ -10,6 +10,7 @@ class Machine(models.Model):
     def __str__(self):
         return self.name
 
+# note: we should add a row for who created the vm session
 class VMSession(models.Model):
     vm_name = models.CharField(max_length=64)
     machine = models.ForeignKey(Machine, on_delete=models.CASCADE)
