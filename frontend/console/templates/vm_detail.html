@@ -107,18 +107,21 @@
       <ul style="margin: 0">
         {% for session in sessions %}
         <li style="margin: 0">
-          session {{ session.session_id }}{% if session.claimed %} (claimed by {{ session.claimed_by }}){% else %}
-          (unclaimed){% endif %}
-          <form
-            method="post"
-            action="{% url 'vm_disconnect' machine.name vm.config.name session.session_id %}"
-            style="display: inline"
-          >
-            {% csrf_token %}
-            <input type="hidden" name="session_uuid" value="{{ session.session_id }}" />
-            <button type="submit">{% if session.claimed %}disconnect{% else %}delete{% endif %}</button>
-          </form>
-          {% endfor %}
+          <div style="display: flex; align-items: center; gap: 9px; margin: 0">
+            <h3>Session: {{ session.session_id }}</h3>
+            <form
+              method="post"
+              action="{% url 'vm_disconnect' machine.name vm.config.name session.session_id %}"
+              style="display: inline"
+            >
+              {% csrf_token %}
+              <input type="hidden" name="session_uuid" value="{{ session.session_id }}" />
+              <button type="submit">{% if session.claimed %}disconnect{% else %}delete{% endif %}</button>
+            </form>
+          </div>
+
+          <p><b>Started:</b> {{ session.created_at }} UTC</p>
+          <b>Claimed by:</b> {{ session.claimed_by }} {% endfor %}
         </li>
       </ul>
       {% else %}

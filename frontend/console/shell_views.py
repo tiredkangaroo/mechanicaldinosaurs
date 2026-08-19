@@ -9,8 +9,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from os import environ
 import uuid
-
-proxy_hostport = environ.get("PROXY_HOSTPORT")
+from django.conf import settings
 
 @login_required
 def shell(request, machine_name):
@@ -43,5 +42,5 @@ def shell(request, machine_name):
     ProxySession(proxy_url=proxy_url, machine=machine, session_id=sessionUUID, initial_req_is_http=True).save()
 
     return render(request, 'shell.html', {
-        "proxy_hostport": proxy_hostport,
+        "proxy_hostport": settings.PROXY_HOSTPORT,
     })

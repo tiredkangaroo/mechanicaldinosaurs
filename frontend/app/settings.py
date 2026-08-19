@@ -27,6 +27,8 @@ SECRET_KEY = environ.get('SECRET_KEY', 'django-insecure-%8k=fmtqrrdia#jm*e=e!+n(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = environ.get('DEBUG', 'False').lower() == 'true'
 
+PROXY_HOSTPORT = environ.get("PROXY_HOSTPORT")
+
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True

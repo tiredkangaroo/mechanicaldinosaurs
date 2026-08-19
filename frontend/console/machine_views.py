@@ -1,6 +1,6 @@
 from django.shortcuts import render, HttpResponse, redirect, reverse
 from django.http import StreamingHttpResponse
-from .models import Machine
+from .models import Machine, ProxySession
 import requests, math, uuid, socket
 from dateutil import parser 
 from django.contrib.auth.decorators import login_required
@@ -61,7 +61,13 @@ def machine_detail(request, machine_name):
             except Exception as e:
                 machine.vms = {'error': str(e)}
     except Exception as e:
-        machine.vm_status = {'error': str(e)}    
+        machine.vm_status = {'error': str(e)}
+
+    # active shell sessions
+    try:
+        machine.active_shell_sessions = ProxySession.objects.filter(machine=machine, proxy_url=f"http://{machine.hostport}/api/shell", claimed=True)
+    except Exception as e:
+        machine.active_shell_sessions = {'error': str(e)}
 
     return render(request, 'machine_detail.html', {'machine': machine})
 

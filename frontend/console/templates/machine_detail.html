@@ -24,7 +24,8 @@
       }
       .machine-info,
       .containers-wrapper,
-      .vms-wrapper {
+      .vms-wrapper,
+      .active-shell-sessions-wrapper {
         max-width: 700px;
         margin: 0px auto;
         padding: 20px;
@@ -79,7 +80,8 @@
         font-size: 0.95rem;
       }
       .container-card,
-      .vm-card {
+      .vm-card,
+      .session-card {
         padding: 15px;
         margin-bottom: 15px;
       }
@@ -198,6 +200,29 @@
       {% empty %}
       <p style="text-align: center; opacity: 0.7; margin: 0">no virtual machines found on this machine.</p>
       {% endfor %}
+    </div>
+    {% endif %}
+    <div class="section-title">
+      <h2>active shell sessions</h2>
+    </div>
+    {% if machine.active_shell_sessions.error %}
+    <div class="error-flash">
+      <h2>an error occurred getting active shell sessions</h2>
+      <p>{{machine.active_shell_sessions.error}}</p>
+    </div>
+    {% else %}
+    <div class="active-shell-sessions-wrapper">
+      <ul>
+        {% for session in machine.active_shell_sessions %}
+        <li class="session-card">
+          <b style="font-size: 1.2em">Session ({{ session.session_id }})</b><br /><br />
+          <b>Started:</b> {{ session.created_at }} UTC<br />
+          <b>Claimed by:</b> {{ session.claimed_by }}
+        </li>
+        {% empty %}
+        <p style="text-align: center; opacity: 0.7; margin: 0">no active shell sessions found on this machine.</p>
+        {% endfor %}
+      </ul>
     </div>
     {% endif %}
 

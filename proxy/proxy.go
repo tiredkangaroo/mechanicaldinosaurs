@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"sync"
 	"time"
@@ -124,50 +125,59 @@ func handleConnection(clientConn net.Conn) {
 	}
 	defer daemonConn.Close()
 
-	reqURL := fmt.Sprintf("%s", proxyURL)
-	// if the initial data from the client that connected to us is an http req, we should fwd while adding auth + changing the host header to the daemon
-	// if it's not, we should just do the regular new request to the daemon
+	// Parse target destination URL from DB
+	targetURL, err := url.Parse(proxyURL)
+	if err != nil {
+		log.Printf("failed to parse proxyURL %s: %v", proxyURL, err)
+		return
+	}
+
+	clientReader := bufio.NewReader(clientConn)
 
 	var req *http.Request
-	if initialReqIsHTTP { // pull req from clientConn and forward it to daemonConn with auth header and host header set to daemon
-		req, err = http.ReadRequest(bufio.NewReader(clientConn))
+	if initialReqIsHTTP {
+		req, err = http.ReadRequest(clientReader)
 		if err != nil {
 			log.Printf("failed to read initial HTTP request: %v", err)
 			return
 		}
-	} else { // create a new GET request to the daemon with auth header and host header set to daemon
-		req, err = http.NewRequest("GET", reqURL, nil)
+	} else {
+		req, err = http.NewRequest("GET", proxyURL, nil)
 		if err != nil {
 			log.Printf("failed to create request: %v", err)
 			return
 		}
 	}
+
+	// update dest
 	req.URL.Scheme = "http"
 	req.URL.Host = hostport
+	req.URL.Path = targetURL.Path
+	req.URL.RawQuery = targetURL.RawQuery
 	req.Host = hostport
+	req.RequestURI = "" // clear RequestURI so req.Write uses req.URL
 	req.Header.Set("Authorization", "Bearer "+secretKey)
+
 	if err := req.Write(daemonConn); err != nil {
 		log.Printf("failed to write request: %v", err)
 		return
 	}
 
-	// buffer size of 3: 2 for the io.Copy goroutines, 1 for the potential disconnect trigger
 	errChan := make(chan error, 3)
 
 	sessionIDsToErrChanLock.Lock()
 	sessionIDsToErrChan[sessionID] = errChan
 	sessionIDsToErrChanLock.Unlock()
 
-	// clean up map entry when leaving this function scope
 	defer func() {
 		sessionIDsToErrChanLock.Lock()
 		delete(sessionIDsToErrChan, sessionID)
 		sessionIDsToErrChanLock.Unlock()
 	}()
 
-	// client to daemon
+	// Read from clientReader instead of clientConn to prevent losing buffered bytes
 	go func() {
-		_, err := io.Copy(daemonConn, clientConn)
+		_, err := io.Copy(daemonConn, clientReader)
 		errChan <- err
 	}()
 
