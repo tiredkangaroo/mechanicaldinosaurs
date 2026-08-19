@@ -32,25 +32,26 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.24"
+          cache: true
 
       - name: Install libvirt dependencies (amd64)
         if: matrix.goarch == 'amd64'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libvirt-dev
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libvirt-dev
 
       - name: Install libvirt cross-compile dependencies (arm64)
         if: matrix.goarch == 'arm64'
         run: |
           sudo dpkg --add-architecture arm64
 
-          # 1. Restrict the default Ubuntu repositories to ONLY pull amd64
+          # Restrict default repos to amd64 to prevent downloading redundant arm64 package indexes
           if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
             sudo sed -i '/^Types: deb/a Architectures: amd64' /etc/apt/sources.list.d/ubuntu.sources
           fi
 
-          # 2. Add the arm64 specific ports repository using the new DEB822 format
-          sudo tee /etc/apt/sources.list.d/arm64-ports.sources <<EOF
+          # Add arm64 ports repository
+          sudo tee /etc/apt/sources.list.d/arm64-ports.sources > /dev/null <<EOF
           Types: deb
           URIs: http://ports.ubuntu.com/ubuntu-ports/
           Suites: noble noble-updates noble-security
@@ -59,13 +60,12 @@ jobs:
           Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
           EOF
 
-          # 3. Update and Install
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu libvirt-dev:arm64
+          # Quiet update and skip recommended packages (prevents downloading full qemu/libvirt daemons)
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu libvirt-dev:arm64
 
       - name: Build and zip for ${{ matrix.goos }}/${{ matrix.goarch }}
         run: |
-          # Define paths relative to the project root workspace
           WORKSPACE_ROOT=$(pwd)
           build_dir="${WORKSPACE_ROOT}/builds/md-daemon-${{ matrix.goos }}-${{ matrix.goarch }}"
           output_name="md-daemon"
@@ -75,7 +75,6 @@ jobs:
 
           echo "Building for ${{ matrix.goos }}/${{ matrix.goarch }}..."
 
-          # Handle cross-compilation environment flags
           if [ "${{ matrix.goarch }}" = "arm64" ]; then
             export CGO_ENABLED=1
             export CC=aarch64-linux-gnu-gcc
@@ -83,17 +82,16 @@ jobs:
             export PKG_CONFIG_ALLOW_CROSS=1
           fi
 
-          # Move to daemon folder to build, but output back to absolute build_dir path
           cd daemon
-          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o "${build_dir}/${output_name}" .
+          # -s -w removes debug symbols and DWARF tables to drastically reduce build/link time and binary size
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags="-s -w" -o "${build_dir}/${output_name}" .
 
-          # Move back to build directory to rename and zip safely
           cd "$build_dir"
           chmod +x "$output_name"
           mv "$output_name" "$renamed_binary"
 
           zip_name="md-daemon-${{ matrix.goos }}-${{ matrix.goarch }}.zip"
-          zip "$zip_name" "$renamed_binary"
+          zip -q "$zip_name" "$renamed_binary"
 
       - name: Upload zipped build
         uses: actions/upload-artifact@v4
@@ -119,6 +117,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.24"
+          cache: true
 
       - name: Build and zip ${{ matrix.project }} for ${{ matrix.goos }}/${{ matrix.goarch }}
         run: |
@@ -128,7 +127,6 @@ jobs:
           output_name="${project}"
           renamed_binary="${project}-${{ matrix.goos }}-${{ matrix.goarch }}"
 
-          # Windows binaries need an .exe suffix
           if [ "${{ matrix.goos }}" = "windows" ]; then
             output_name="${output_name}.exe"
             renamed_binary="${renamed_binary}.exe"
@@ -139,7 +137,7 @@ jobs:
           echo "Building ${project} for ${{ matrix.goos }}/${{ matrix.goarch }}..."
 
           cd "$project"
-          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o "${build_dir}/${output_name}" .
+          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags="-s -w" -o "${build_dir}/${output_name}" .
 
           cd "$build_dir"
           mv "$output_name" "$renamed_binary"
@@ -148,7 +146,7 @@ jobs:
           fi
 
           zip_name="${project}-${{ matrix.goos }}-${{ matrix.goarch }}.zip"
-          zip "$zip_name" "$renamed_binary"
+          zip -q "$zip_name" "$renamed_binary"
 
       - name: Upload zipped build
         uses: actions/upload-artifact@v4
@@ -162,22 +160,18 @@ jobs:
     needs: [build, build-simple]
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Download all zipped artifacts
         uses: actions/download-artifact@v4
         with:
           path: final-builds
           merge-multiple: true
 
-      - name: Create or update 'latest' release
+      - name: Create or update 'latest' release and upload assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Use 'gh' directly (pre-installed on ubuntu-latest)
           if gh release view latest &>/dev/null; then
-            echo "Release 'latest' exists. Deleting and recreating..."
+            echo "Release 'latest' exists. Deleting..."
             gh release delete latest --yes
           fi
 
@@ -186,8 +180,5 @@ jobs:
             --notes "Automated build for latest commit" \
             --latest
 
-      - name: Upload all zips to release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          find final-builds -type f -name "*.zip" -exec gh release upload latest {} --clobber \;
+          # Batch upload all zips in a single CLI call instead of a slow loop
+          gh release upload latest final-builds/*.zip --clobber
