@@ -18,6 +18,7 @@ jobs:
   build:
     name: Build Daemon for multiple OS/ARCH
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     strategy:
       matrix:
@@ -37,8 +38,11 @@ jobs:
       - name: Install libvirt dependencies (amd64)
         if: matrix.goarch == 'amd64'
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends libvirt-dev
+          sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y --no-install-recommends \
+            -o Dpkg::Options::="--force-confdef" \
+            -o Dpkg::Options::="--force-confold" \
+            libvirt-dev
 
       - name: Install libvirt cross-compile dependencies (arm64)
         if: matrix.goarch == 'arm64'
@@ -61,8 +65,10 @@ jobs:
           EOF
 
           # Install cross-gcc, libvirt headers, and explicitly pull arm64 C runtime headers
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends \
+          sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y --no-install-recommends \
+            -o Dpkg::Options::="--force-confdef" \
+            -o Dpkg::Options::="--force-confold" \
             gcc-aarch64-linux-gnu \
             libc6-dev:arm64 \
             libvirt-dev:arm64
@@ -78,15 +84,14 @@ jobs:
 
           echo "Building for ${{ matrix.goos }}/${{ matrix.goarch }}..."
 
+          export CGO_ENABLED=1
           if [ "${{ matrix.goarch }}" = "arm64" ]; then
-            export CGO_ENABLED=1
             export CC=aarch64-linux-gnu-gcc
             export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig
             export PKG_CONFIG_ALLOW_CROSS=1
           fi
 
           cd daemon
-          # -s -w removes debug symbols and DWARF tables to drastically reduce build/link time and binary size
           GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags="-s -w" -o "${build_dir}/${output_name}" .
 
           cd "$build_dir"
@@ -105,6 +110,7 @@ jobs:
   build-simple:
     name: Build ${{ matrix.project }} for multiple OS/ARCH
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     strategy:
       matrix:
@@ -160,6 +166,7 @@ jobs:
   release:
     name: Create 'latest' GitHub Release
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: [build, build-simple]
 
     steps:
@@ -183,5 +190,4 @@ jobs:
             --notes "Automated build for latest commit" \
             --latest
 
-          # Batch upload all zips in a single CLI call instead of a slow loop
           gh release upload latest final-builds/*.zip --clobber
