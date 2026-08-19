@@ -10,17 +10,16 @@ class Machine(models.Model):
     def __str__(self):
         return self.name
 
-# note: we should add a row for who created the vm session
-class VMSession(models.Model):
-    vm_name = models.CharField(max_length=64)
-    machine = models.ForeignKey(Machine, on_delete=models.CASCADE)
+class ProxySession(models.Model):
     session_id = models.CharField(max_length=36, unique=True)
+    machine = models.ForeignKey(Machine, on_delete=models.CASCADE)
+    proxy_url = models.CharField(max_length=512)
     claimed = models.BooleanField(default=False)
     claimed_by = models.CharField(max_length=256, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.vm_name} on {self.machine.name}"
+        return f"{self.session_id} on {self.machine.name}"
 
 # this is NOT the source of truth for deployments; this just holds info that would not persist bc they're modified underlying (the replicas desired, when you stop it) and the service name (which needs a concrete way of referencing it)
 class Deployment(models.Model):

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/golang-jwt/jwt/v5"
+	// "github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
 
@@ -15,7 +15,7 @@ type Auth struct {
 	locked bool // lock is permanent for now
 }
 
-var jwtPublicKey, _ = jwt.ParseECPublicKeyFromPEM([]byte(API_PUBLIC_KEY))
+// var jwtPublicKey, _ = jwt.ParseECPublicKeyFromPEM([]byte(API_PUBLIC_KEY))
 
 func (a *Auth) Middleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
@@ -29,18 +29,18 @@ func (a *Auth) Middleware(next echo.HandlerFunc) echo.HandlerFunc {
 			return c.String(http.StatusUnauthorized, "no authorization")
 		}
 		valid := false
-		if c.Request().Header.Get("X-Authorization-Method") == "jwt" {
-			if jwtPublicKey == nil {
-				return c.String(http.StatusInternalServerError, "jwt public key not configured")
-			}
-			tokenString := authorization[len("Bearer "):]
-			token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-				return jwtPublicKey, nil
-			})
-			valid = err == nil && token.Valid
-		} else {
-			valid = "Bearer "+a.Secret == authorization
-		}
+		// if c.Request().Header.Get("X-Authorization-Method") == "jwt" {
+		// 	if jwtPublicKey == nil {
+		// 		return c.String(http.StatusInternalServerError, "jwt public key not configured")
+		// 	}
+		// 	tokenString := authorization[len("Bearer "):]
+		// 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		// 		return jwtPublicKey, nil
+		// 	})
+		// 	valid = err == nil && token.Valid
+		// } else {
+		valid = "Bearer "+a.Secret == authorization
+		// }
 		if !valid {
 			a.locked = true
 			writeLog(fmt.Sprintf("locked by ip %s, forwarded: %s. authorization given: %s", c.Request().RemoteAddr, c.RealIP(), authorization)) // again another possible resource max if sb gave a really long  auth header

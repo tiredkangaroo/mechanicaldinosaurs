@@ -74,18 +74,19 @@ func main() {
 func handleConnection(clientConn net.Conn) {
 	defer clientConn.Close()
 
-	var vmName, hostport, secretKey, sessionID string
+	var proxyURL, hostport, secretKey, sessionID string
 	var createdAt time.Time
 
 	query := `
-		SELECT s.session_id, s.vm_name, s.created_at, m.hostport, m.secret_key
-		FROM console_vmsession s
+	SELECT s.session_id, s.proxy_url, s.created_at, m.hostport, m.secret_key
+		FROM console_proxysession s
 		JOIN console_machine m ON s.machine_id = m.name
 		WHERE s.claimed = FALSE
 		ORDER BY s.created_at DESC
-		LIMIT 1`
+		LIMIT 1	
+	`
 
-	err := conn.QueryRow(context.Background(), query).Scan(&sessionID, &vmName, &createdAt, &hostport, &secretKey)
+	err := conn.QueryRow(context.Background(), query).Scan(&sessionID, &proxyURL, &createdAt, &hostport, &secretKey)
 	if err == pgx.ErrNoRows {
 		log.Printf("unauthorized: no active sessions found in database")
 		return
@@ -96,7 +97,7 @@ func handleConnection(clientConn net.Conn) {
 
 	clientAddr := clientConn.RemoteAddr().String()
 
-	claimQuery := `UPDATE console_vmsession SET claimed = TRUE, claimed_by = $1 WHERE session_id = $2`
+	claimQuery := `UPDATE console_proxysession SET claimed = TRUE, claimed_by = $1 WHERE session_id = $2`
 	_, err = conn.Exec(context.Background(), claimQuery, clientAddr, sessionID)
 	if err != nil {
 		log.Printf("failed to claim session %s by %s: %v", sessionID, clientAddr, err)
@@ -104,7 +105,7 @@ func handleConnection(clientConn net.Conn) {
 	}
 
 	defer func() {
-		deleteQuery := `DELETE FROM console_vmsession WHERE session_id = $1`
+		deleteQuery := `DELETE FROM console_proxysession WHERE session_id = $1`
 		if _, err := conn.Exec(context.Background(), deleteQuery, sessionID); err != nil {
 			log.Printf("failed to delete session %s after closing: %v", sessionID, err)
 		} else {
@@ -112,7 +113,7 @@ func handleConnection(clientConn net.Conn) {
 		}
 	}()
 
-	log.Printf("forwarding connection from %s to %s (created at %s, session id: %s)", clientAddr, vmName, createdAt.String(), sessionID)
+	log.Printf("forwarding connection from %s to %s (created at %s, session id: %s)", clientAddr, proxyURL, createdAt.String(), sessionID)
 
 	daemonConn, err := net.DialTimeout("tcp", hostport, 5*time.Second)
 	if err != nil {
@@ -121,7 +122,7 @@ func handleConnection(clientConn net.Conn) {
 	}
 	defer daemonConn.Close()
 
-	reqURL := fmt.Sprintf("http://%s/api/vms/%s/proxy", hostport, vmName)
+	reqURL := fmt.Sprintf("%s", proxyURL)
 	req, err := http.NewRequest("GET", reqURL, nil)
 	if err != nil {
 		log.Printf("failed to create request: %v", err)

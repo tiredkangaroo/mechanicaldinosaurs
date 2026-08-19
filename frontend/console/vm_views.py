@@ -1,6 +1,6 @@
 from django.shortcuts import render, HttpResponse, redirect, reverse
 from django.http import StreamingHttpResponse
-from .models import Machine, VMSession
+from .models import Machine, ProxySession
 import requests, math, uuid, socket
 from dateutil import parser 
 from django.contrib.auth.decorators import login_required
@@ -72,7 +72,7 @@ def vm_detail(request, machine_name, vm_name):
     
     sessions = None
     try:
-        sessions = VMSession.objects.filter(vm_name=vm_name, machine=machine)
+        sessions = ProxySession.objects.filter(proxy_url=proxy_url_for_vm(machine, vm_name), machine=machine)
     except Exception as e:
         return HttpResponse(f"error fetching sessions: {str(e)}", status=503)
 
@@ -157,7 +157,7 @@ def vm_connect(request, machine_name, vm_name):
         return HttpResponse("machine not found", status=404)
     
     try:
-        unclaimedSessions = VMSession.objects.filter(claimed=False)
+        unclaimedSessions = ProxySession.objects.filter(claimed=False)
         if unclaimedSessions.exists():
             return redirect(reverse('vm_detail', kwargs={'machine_name': machine_name, 'vm_name': vm_name}) + f"?error=there is an unclaimed session for VM {unclaimedSessions.first().vm_name} on machine {unclaimedSessions.first().machine.name}. Please claim or disconnect it first.")
     except Exception as e:
@@ -166,7 +166,7 @@ def vm_connect(request, machine_name, vm_name):
     sessionUUID = str(uuid.uuid4())
     session = None
     try:
-        VMSession(vm_name=vm_name, machine=machine, session_id=sessionUUID).save()
+        ProxySession(proxy_url=proxy_url_for_vm(machine, vm_name), machine=machine, session_id=sessionUUID).save()
     except Exception as e:
         return HttpResponse(f"error creating session: {str(e)}", status=503)
     
@@ -175,11 +175,11 @@ def vm_connect(request, machine_name, vm_name):
 @login_required
 def vm_disconnect(request, machine_name, vm_name, session_id):
     try:
-        session = VMSession.objects.get(session_id=session_id)
+        session = ProxySession.objects.get(session_id=session_id)
         if session.claimed:
             disconnect_session(session_id)
         session.delete()    
-    except VMSession.DoesNotExist:
+    except ProxySession.DoesNotExist:
         return HttpResponse("session not found", status=404)
     return redirect('vm_detail', machine_name=machine_name, vm_name=vm_name)
 
@@ -228,3 +228,6 @@ def download_iso(request, machine_name):
             return HttpResponse(f"error downloading ISO: {str(e)}", status=500)
 
     return render(request, 'download_iso.html', {"machine": machine})
+
+def proxy_url_for_vm(machine, vm_name):
+    return f"http://{machine.hostport}/api/vms/{vm_name}/proxy"
