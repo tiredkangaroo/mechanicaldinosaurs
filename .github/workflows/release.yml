@@ -182,6 +182,9 @@ jobs:
     needs: [build, build-simple]
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Download all zipped artifacts
         uses: actions/download-artifact@v4
         with:
@@ -200,6 +203,7 @@ jobs:
           gh release create latest \
             --title "latest build" \
             --notes "Automated build for latest commit" \
+            --target ${{ github.sha }} \
             --latest
 
           gh release upload latest final-builds/*.zip --clobber
