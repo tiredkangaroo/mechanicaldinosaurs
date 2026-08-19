@@ -12,7 +12,7 @@ it's [here](https://bucket.mechanicaldinosaurs.net/md%20demo.mov)!
 
 you can also check out the demo [here](https://mechanicaldinosaurs.net). to sign in, set the username to the program you're reviewing for (lowercase), and the password to "demo1234".
 
-if you want to test out the vm display output with the demo, the demo has a tcp tunnel located at vm-proxy.mechanicaldinosaurs.net. use `cloudflared access tcp --hostname vm-proxy.mechanicaldinosaurs.net --url localhost:3831` and use localhost:3831 as the VNC/SPICE server. you can't access it directly because the vm-proxy tunnel wraps the underlying tcp connection in websockets.
+if you want to test out the vm display output with the demo, the demo has a tcp tunnel located at proxy.mechanicaldinosaurs.net. use `cloudflared access tcp --hostname proxy.mechanicaldinosaurs.net --url localhost:3831` and use localhost:3831 as the VNC/SPICE server. you can't access it directly because the proxy tunnel wraps the underlying tcp connection in websockets.
 
 # components of mechanical dinosaurs
 
@@ -57,7 +57,7 @@ the machine info data refresh trigger is a trigger that triggers whenever the au
 
 conditions have context, so you can, for example, make an automation with trigger `machine info data refresh` that has a conditional that checks the temperature of the CPU of a certain machine, and sends an email if it's too high.
 
-## vm-proxy
+## proxy
 
 optional! if the following things are true, this is needed:
 
@@ -80,7 +80,7 @@ standalone golang file that runs the console, automation engine, and vm proxy al
 
 ## console & database
 
-- run a postgres instance somewhere. the postgres server needs to be accessible to the console, automation engine (opt), and vm-proxy (opt).
+- run a postgres instance somewhere. the postgres server needs to be accessible to the console, automation engine (opt), and proxy (opt).
 
 - set the environment variables. see .env.example
 
@@ -175,7 +175,7 @@ write this (you will need root!) to `/etc/systemd/system/md-automation-engine.se
 use systemctl to enable the service
 `sudo systemctl enable md-automation-engine.service --now`
 
-## vm proxy
+## proxy
 
 download the latest binary [here](https://github.com/tiredkangaroo/mechanicaldinosaurs/releases/tag/latest) for the right architecture.
 
@@ -183,11 +183,11 @@ set up a systemd service to run the daemon:
 
 ```yaml
 [Unit]
-Description=vm proxy
+Description=proxy
 After=network.target
 
 [Service]
-ExecStart=/path/to/vm_proxy/binary
+ExecStart=/path/to/proxy/binary
 Restart=always
 Environment=KEY1=VALUE1 # see environment variables for the daemon in .env.example in this repo
 Environment=KEY2=VALUE2
@@ -196,10 +196,10 @@ Environment=KEY2=VALUE2
 WantedBy=multi-user.target
 ```
 
-write this (you will need root!) to `/etc/systemd/system/md-vm-proxy.service`
+write this (you will need root!) to `/etc/systemd/system/md-proxy.service`
 
 use systemctl to enable the service
-`sudo systemctl enable md-vm-proxy.service --now`
+`sudo systemctl enable md-proxy.service --now`
 
 # ai declaration
 

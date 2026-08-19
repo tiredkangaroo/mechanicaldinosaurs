@@ -4,7 +4,7 @@ package main
 //
 // it is a standalone runner: no third-party dependencies, just the standard library. build it with
 // `go build -o md-runner runner.go` and run the resulting binary from the repo root (the directory
-// that contains the "frontend" folder and the "automation-engine" / "vm-proxy" binaries), or run it
+// that contains the "frontend" folder and the "automation-engine" / "proxy" binaries), or run it
 // directly with `go run runner.go`.
 //
 // configuration is read from a ".env" file (see .env.example) plus a handful of MD_RUNNER_* variables
@@ -34,7 +34,7 @@ import (
 // sensible defaults.
 //
 //   MD_ROOT                 working directory that contains "frontend", "automation-engine", and
-//                           "vm-proxy" (default: the runner's own working directory)
+//                           "proxy" (default: the runner's own working directory)
 //   MD_ENV_FILE             path to the env file to load (default: "<MD_ROOT>/.env")
 //
 //   CONSOLE_DIR             directory of the django project, relative to MD_ROOT (default: "frontend")
@@ -52,7 +52,7 @@ import (
 //
 //   AUTOMATION_ENGINE_BIN   path to the automation-engine binary, relative to MD_ROOT
 //                           (default: "./automation-engine")
-//   VM_PROXY_BIN            path to the vm-proxy binary, relative to MD_ROOT (default: "./vm-proxy")
+//   proxy_BIN            path to the proxy binary, relative to MD_ROOT (default: "./proxy")
 //
 //   MD_SHUTDOWN_GRACE       how long to wait after SIGTERM before force-killing a still-running
 //                           component, e.g. "10s" (default: "10s")
@@ -175,9 +175,9 @@ func buildComponents(root string, env []string) ([]component, error) {
 	}
 
 	automationBin := absPath(root, lookupEnvOr(env, "AUTOMATION_ENGINE_BIN", "./automation-engine"))
-	vmProxyBin := absPath(root, lookupEnvOr(env, "VM_PROXY_BIN", "./vm-proxy"))
+	proxyBin := absPath(root, lookupEnvOr(env, "PROXY_BIN", "./proxy"))
 
-	for _, bin := range []string{automationBin, vmProxyBin} {
+	for _, bin := range []string{automationBin, proxyBin} {
 		if _, err := os.Stat(bin); err != nil {
 			return nil, fmt.Errorf("binary %s: %w", bin, err)
 		}
@@ -186,7 +186,7 @@ func buildComponents(root string, env []string) ([]component, error) {
 	return []component{
 		{name: "console", dir: consoleDir, args: consoleArgs},
 		{name: "automation-engine", dir: root, args: []string{automationBin}},
-		{name: "vm-proxy", dir: root, args: []string{vmProxyBin}},
+		{name: "proxy", dir: root, args: []string{proxyBin}},
 	}, nil
 }
 

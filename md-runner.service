@@ -1,5 +1,5 @@
 [Unit]
-Description=md runner (runs console, automation-engine, vm-proxy components)
+Description=md runner (runs console, automation-engine, proxy components)
 After=network.target
 
 [Service]

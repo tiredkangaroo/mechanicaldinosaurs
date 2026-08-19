@@ -13,9 +13,9 @@ from django.conf import settings
 import resend
 from django.views.decorators.clickjacking import xframe_options_exempt
 
-vm_proxy_disconnect_host = environ.get("PROXY_DISCONNECT_HOST")
-vm_proxy_disconnect_port = environ.get("PROXY_DISCONNECT_PORT")
-vm_proxy_disconnect_secret = environ.get("PROXY_DISCONNECT_SECRET")
+proxy_disconnect_host = environ.get("PROXY_DISCONNECT_HOST")
+proxy_disconnect_port = environ.get("PROXY_DISCONNECT_PORT")
+proxy_disconnect_secret = environ.get("PROXY_DISCONNECT_SECRET")
 
 
 @login_required
@@ -184,7 +184,7 @@ def vm_disconnect(request, machine_name, vm_name, session_id):
     return redirect('vm_detail', machine_name=machine_name, vm_name=vm_name)
 
 def disconnect_session(session_id):
-    if len(vm_proxy_disconnect_secret) != 128:
+    if len(proxy_disconnect_secret) != 128:
         print("error: disconnect secret is not 128 bytes.")
         return
     if len(session_id) != 36:
@@ -192,12 +192,12 @@ def disconnect_session(session_id):
         return
 
     try:
-        print(f"Connecting to disconnect service at {vm_proxy_disconnect_host}:{vm_proxy_disconnect_port}...")
+        print(f"Connecting to disconnect service at {proxy_disconnect_host}:{proxy_disconnect_port}...")
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.settimeout(5.0) # 5 second timeout should be enough i think
-            s.connect((vm_proxy_disconnect_host, int(vm_proxy_disconnect_port)))
+            s.connect((proxy_disconnect_host, int(proxy_disconnect_port)))
             
-            s.sendall(vm_proxy_disconnect_secret.encode('utf-8'))
+            s.sendall(proxy_disconnect_secret.encode('utf-8'))
             s.sendall(session_id.encode('utf-8'))
             
             print(f"successfully sent disconnect signal for session: {session_id}")

@@ -8,7 +8,7 @@ on:
       - "go.sum"
       - "daemon/**"
       - "automation-engine/**"
-      - "vm-proxy/**"
+      - "proxy/**"
       - ".github/workflows/release.yml"
 
 permissions:
@@ -107,7 +107,7 @@ jobs:
 
     strategy:
       matrix:
-        project: [automation-engine, vm-proxy]
+        project: [automation-engine, proxy]
         goos: [linux, darwin, windows]
         goarch: [amd64, arm64]
 
