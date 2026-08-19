@@ -47,6 +47,15 @@ jobs:
       - name: Install libvirt cross-compile dependencies (arm64)
         if: matrix.goarch == 'arm64'
         run: |
+          # Stop background services that hold dpkg locks
+          sudo systemctl stop apt-daily.timer apt-daily-upgrade.timer apt-daily.service apt-daily-upgrade.service || true
+
+          # Wait until any existing dpkg/apt lock is released
+          while sudo fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/lib/dpkg/lock >/dev/null 2>&1; do
+            echo "Waiting for background APT process to release locks..."
+            sleep 2
+          done
+
           sudo dpkg --add-architecture arm64
 
           # Restrict default repos to amd64 to prevent downloading redundant arm64 package indexes
@@ -64,11 +73,14 @@ jobs:
           Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
           EOF
 
-          # Install cross-gcc, libvirt headers, and explicitly pull arm64 C runtime headers
-          sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update -qq
-          sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y --no-install-recommends \
+          # Install cross-gcc, libvirt headers, and arm64 C runtime headers non-interactively
+          export DEBIAN_FRONTEND=noninteractive
+          export NEEDRESTART_MODE=a
+          sudo -E apt-get update -qq
+          sudo -E apt-get install -y --no-install-recommends \
             -o Dpkg::Options::="--force-confdef" \
             -o Dpkg::Options::="--force-confold" \
+            -o Dpkg::Use-Pty=0 \
             gcc-aarch64-linux-gnu \
             libc6-dev:arm64 \
             libvirt-dev:arm64
