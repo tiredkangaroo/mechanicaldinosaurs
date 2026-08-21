@@ -4,3 +4,4 @@ proxy/server.key
 dev-test-proxy/server.crt
 dev-test-proxy/server.key
 k3s-config.yaml
+logs
