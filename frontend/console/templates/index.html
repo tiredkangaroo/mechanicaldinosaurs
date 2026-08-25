@@ -14,6 +14,12 @@
       .tunnels-link:hover, .passkeys-link:hover {
         transform: scale(1.08);
       }
+      .multiple-cards {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 40px;
+        margin-top: 20px;
+      }
       .machines,
       .vms,
       .deployments,
@@ -186,19 +192,13 @@
           </a>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 20px; margin-top: 10px; ">
+        <div class="multiple-cards">
           {% for machine in machines %}
           <a href="{% url 'machine_detail' machine.name %}" class="machine-link">
-            <div style="display: flex; flex-direction: column; gap: 4px; justify-content: center; align-items: center">
+            <div style="display: flex; flex-direction: column; gap: 4px; justify-content: center; align-items: center; padding: 18px 24px;">
               <img src="{% static 'server.png' %}" width="128px" style="border-radius: 8px; object-fit: cover" />
               <div style="display: flex; flex-direction: row; gap: 12px; align-items: center">
                 <h2 style="margin: 0;" class="machine-name">{{ machine.name }}</h2>
-                <form method="POST" action="{% url 'machine_delete' machine.name %}">
-                  {% csrf_token %}
-                  <button class="button-dangerous" style="margin-top: 6px;">
-                    delete
-                  </button>
-                </form>
               </div>
             </div>
             <!-- <div
@@ -229,7 +229,7 @@
           <h1>vms</h1>
           <button id="add-vm-button" popovertarget="add-vm-dialog">+</button>
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 20px; margin-top: 10px">
+        <div class="multiple-cards">
           {% for vm in vms %}
           <a href="{% url 'vm_detail' vm.machine.name vm.config.name %}" class="vm-link">
             <div style="display: flex; flex-direction: column; gap: 4px; justify-content: center; align-items: center">

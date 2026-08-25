@@ -135,9 +135,11 @@
         flex-direction: column;
         align-items: center;
         overflow-y: auto;
+        /* background-color: var(--secondary-color); */
       }
       .subpage-left {
         justify-content: center;
+        /* color: var(--primary-color); */
       }
     </style>
   </head>
@@ -147,11 +149,21 @@
         <img src="{% static 'server.png' %}" width="200px" />
         <h1
           id="machine-name"
-          style="width: fit-content; text-align: center; margin-left: auto; margin-right: auto; padding: 8px 22px"
+          style="
+            width: fit-content;
+            text-align: center;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 8px 22px 0px 22px;
+          "
         >
           {{machine.name}}
           <pre>{{machine.hostport}}</pre>
         </h1>
+        <form method="POST" action="{% url 'machine_delete' machine.name %}">
+          {% csrf_token %}
+          <button class="button-dangerous">delete</button>
+        </form>
       </div>
       <div class="subpage">
         {% if machine.vm_status.error %}
@@ -176,7 +188,7 @@
               <div class="info-list">
                 <p><b>model:</b> {{machine.info.cpu}}</p>
                 <p><b>cores:</b> {{machine.info.cpu_num}}</p>
-                <p><b>usage:</b> {{machine.info.cpu_usage}}%</p>
+                <p><b>usage:</b> {{machine.info.cpu_usage|floatformat:2 }}%</p>
                 <p><b>temp:</b> {{machine.info.cpu_temp}}°C</p>
               </div>
             </div>
