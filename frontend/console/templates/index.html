@@ -120,12 +120,15 @@
         text-align: center;
         margin-right: 10px;
       }
-      .machine-link {
-        text-decoration: none; color: inherit; width: min-content; padding: 18px 10px; border-radius: 8px; background-color: var(--secondary-color); outline: 2px solid var(--primary-color); transition: all 0.2s ease-in-out; 
+      .machine-link, .vm-link {
+        text-decoration: none; color: inherit; width: min-content; padding: 18px 10px; border-radius: 8px; 
+        background-color: var(--secondary-color); 
+        outline: 2px solid var(--primary-color);
+        transition: all 0.2s ease-in-out; 
         color: var(--primary-color);
       }
-      .machine-link:hover {
-        outline: 2px solid var(--primary-color);
+      .machine-link:hover, .vm-link:hover {
+        /* outline: 2px solid var(--primary-color); */
         transform: scale(1.08);
       }
       .machine-name {
@@ -226,8 +229,16 @@
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 20px; margin-top: 10px">
           {% for vm in vms %}
-          <a href="{% url 'vm_detail' vm.machine.name vm.config.name %}" style="text-decoration: none; color: inherit">
-            <div
+          <a href="{% url 'vm_detail' vm.machine.name vm.config.name %}" class="vm-link">
+            <div style="display: flex; flex-direction: column; gap: 4px; justify-content: center; align-items: center">
+              <img src="{% static 'vm-box.png' %}" width="128px" style="border-radius: 8px; object-fit: cover" />
+              <div style="display: flex; flex-direction: row; gap: 12px; align-items: center">
+                  <div class="status-indicator status-{{ vm.status|lower }}" title="{{ vm.status }}"></div>
+                <h2 style="margin: 0;" class="machine-name">{{ vm.config.name }}</h2>
+              </div>
+            </div>
+
+            <!-- <div
               style="
                 padding: 18px 24px;
                 background-color: var(--secondary-color);
@@ -239,11 +250,7 @@
             >
               <h2 style="margin-bottom: 0; color: var(--primary-color)">{{ vm.config.name }}</h2>
               <p style="color: var(--md-gray); margin-top: 4px">{{ vm.machine.name }}</p>
-              <div style="display: flex; justify-content: center; align-items: center; gap: 6px">
-                <div class="status-indicator status-{{ vm.status|lower }}"></div>
-                {{ vm.status }}
-              </div>
-            </div>
+            </div> -->
           </a>
           {% empty %}
           <p style="margin: 0">No VMs found.</p>
