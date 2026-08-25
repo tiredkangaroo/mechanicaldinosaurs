@@ -68,8 +68,19 @@ def machine_detail(request, machine_name):
         machine.active_shell_sessions = ProxySession.objects.filter(machine=machine, proxy_url=f"http://{machine.hostport}/api/shell", claimed=True)
     except Exception as e:
         machine.active_shell_sessions = {'error': str(e)}
+    
+    machine.tunnels = machine.cf_tunnels if machine.cf_tunnels else []
 
-    return render(request, 'machine_detail.html', {'machine': machine})
+    # get the account's tunnel IDs
+    account_tunnels = []
+    try:
+        resp = requests.get(f"https://api.cloudflare.com/client/v4/accounts/{settings.CLOUDFLARE_ACCOUNT_ID}/cfd_tunnel", headers={'Authorization': f'Bearer {settings.CLOUDFLARE_API_TOKEN}'}, timeout=settings.DEFAULT_TIMEOUT)
+        if resp.status_code == 200:
+            account_tunnels = [{'id': tunnel['id'], 'name': tunnel['name']} for tunnel in resp.json().get('result', [])]
+    except Exception as e:
+        account_tunnels = {'error': str(e)}
+
+    return render(request, 'machine_detail.html', {'machine': machine, 'account_tunnels': account_tunnels})
 
 @login_required
 def machine_delete(request, machine_name):

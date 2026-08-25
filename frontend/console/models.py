@@ -6,6 +6,7 @@ class Machine(models.Model):
     name = models.CharField(max_length=64, primary_key=True)
     hostport = models.CharField(max_length=512)
     secret_key = models.CharField(max_length=256)
+    cf_tunnels = models.JSONField(null=True, blank=True) # list of {'id': 'id', 'name': 'name'} associated with this machine 
 
     def __str__(self):
         return self.name

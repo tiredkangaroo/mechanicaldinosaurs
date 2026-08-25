@@ -29,6 +29,9 @@ DEBUG = environ.get('DEBUG', 'False').lower() == 'true'
 
 PROXY_HOSTPORT = environ.get("PROXY_HOSTPORT")
 
+CLOUDFLARE_ACCOUNT_ID = environ.get("CLOUDFLARE_ACCOUNT_ID")
+CLOUDFLARE_API_TOKEN = environ.get("CLOUDFLARE_API_TOKEN")
+
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True

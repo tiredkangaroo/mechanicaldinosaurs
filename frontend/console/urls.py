@@ -48,4 +48,6 @@ urlpatterns = [
     path('automations/<str:automation_id>/clear-error-logs', automation_views.clear_automation_error_logs, name='clear_automation_error_logs'),
 
     path('tunnels/', tunnels_views.tunnels, name='tunnels'),
+    path('machine/<str:machine_name>/tunnels/add-tunnel/', tunnels_views.add_tunnel, name='add_tunnel'),
+    path('machine/<str:machine_name>/tunnels/<str:tunnel_id>/remove', tunnels_views.remove_tunnel, name='remove_tunnel'),
 ]

@@ -278,9 +278,59 @@
         </div>
         {% endif %}
 
-        <h3 style="text-align: center">
-          <a href="{% url 'tunnels' %}#machine-{{ machine.name }}-title">view network exposure</a>
-        </h3>
+        <div style="text-align: center">
+          <h2>tunnels</h2>
+          <p>the cloudflare tunnels associated with this machine.</p>
+        </div>
+        <div class="tunnels-wrapper" style="width: 80%">
+          <ul>
+            {% for tunnel in machine.tunnels %}
+            <li style="display: flex; flex-direction: row; gap: 10px; align-items: center; justify-content: center">
+              <p style="margin: 0">- {{ tunnel.name }} ({{ tunnel.id }})</p>
+              <form method="POST" action="{% url 'remove_tunnel' machine_name=machine.name tunnel_id=tunnel.id %}">
+                {% csrf_token %}
+                <button class="button-dangerous">remove</button>
+              </form>
+            </li>
+            {% empty %}
+            <p style="text-align: center; opacity: 0.7; margin: 0">no tunnels associated with this machine.</p>
+            {% endfor %}
+          </ul>
+          {% if account_tunnels.error %}
+          <div class="error-flash">
+            <h2>an error occurred getting account tunnel IDs</h2>
+            <p>{{account_tunnels.error}}</p>
+          </div>
+          {% else %}
+          <form
+            method="POST"
+            action="{% url 'add_tunnel' machine_name=machine.name %}"
+            style="
+              margin-top: 10px;
+              width: 100%;
+              display: flex;
+              flex-direction: column;
+              gap: 10px;
+              align-items: center;
+              justify-content: center;
+            "
+            onsubmit="
+              document.getElementById('tunnel-name').value =
+                document.getElementById('tunnel-select').selectedOptions[0].dataset.name
+            "
+          >
+            {% csrf_token %}
+            <input type="hidden" name="name" value="" id="tunnel-name" />
+            <select name="tunnel_id" style="width: 100%; padding: 10px" id="tunnel-select">
+              <option value="" disabled selected>-- select a tunnel --</option>
+              {% for tunnel in account_tunnels %}
+              <option value="{{ tunnel.id }}" data-name="{{ tunnel.name }}">{{ tunnel.name }} ({{ tunnel.id }})</option>
+              {% endfor %}
+            </select>
+            <button style="width: 100%; padding: 10px">add tunnel id</button>
+          </form>
+          {% endif %}
+        </div>
       </div>
     </main>
   </body>

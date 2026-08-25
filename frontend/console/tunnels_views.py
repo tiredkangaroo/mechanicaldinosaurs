@@ -7,8 +7,8 @@ from urllib.parse import urlparse
 from django.conf import settings
 
 # needs tunnel:read and tunnel:edit
-cloudflare_account_id = environ.get("CLOUDFLARE_ACCOUNT_ID")
-cloudflare_api_token = environ.get("CLOUDFLARE_API_TOKEN")
+cloudflare_account_id = settings.CLOUDFLARE_ACCOUNT_ID
+cloudflare_api_token = settings.CLOUDFLARE_API_TOKEN
 
 # note: more of these api calls need to be wrapped in try/except
 def tunnels(request):
@@ -67,33 +67,9 @@ def tunnels(request):
     machine_tunnels = {} # machine name -> list of tunnel ids
     errors = []
     for machine in machines:
-        # get a machine's tunnel ids/tokens
-        print("getting tunnels for machine", machine.name)
-        resp = None
-        try:
-            resp = requests.get(f"http://{machine.hostport}/api/tunnels/ids-and-tokens", headers={"Authorization": f"Bearer {machine.secret_key}"}, timeout=settings.DEFAULT_TIMEOUT)
-        except Exception as e:
-            errors.append(f"fetching tunnel for machine {machine.name}: {str(e)}")
-            continue # just skip this machine if it can't be reached
-        
-        if resp.status_code != 200:
-            continue # just skip
-        for idOrToken in resp.json():
-            # get the tunnel id (if it's a token, we need to look it up in the tunnel_tokens dict)
-            tunnel_id = None
-            if idOrToken.get("type") == "id":
-                tunnel_id = idOrToken["value"]
-            elif idOrToken.get("type") == "token":
-                tunnel_id = tunnel_tokens.get(idOrToken["value"].strip())
-
-            if not tunnel_id:
-                # note: potentially sensitive info being logged
-                print(f"could not find tunnel id for machine {machine.name} with id/token {idOrToken}")
-                continue
-            
-            if machine.name not in machine_tunnels:
-                machine_tunnels[machine.name] = []
-            machine_tunnels[machine.name].append(tunnel_id)
+        if not machine.cf_tunnels:
+            continue
+        machine_tunnels[machine.name] = [tunnel.get("id") for tunnel in machine.cf_tunnels]
     
     # now we've got all the tunnels and their ingress rules, and we know which machines have which tunnels
     # which means we can associate the ingress rules with the machines
@@ -197,3 +173,48 @@ def tunnels(request):
         "machine_tunnels": machine_tunnels,
         "errors": errors,
     })    
+
+def add_tunnel(request, machine_name):
+    if request.method == "POST":
+        name = request.POST.get("name")
+        tunnel_id = request.POST.get("tunnel_id")
+        if not tunnel_id:
+            return HttpResponse("tunnel_id is required", status=400)
+        
+        try:
+            machine = Machine.objects.get(name=machine_name)
+        except Machine.DoesNotExist:
+            return HttpResponse(f"machine {machine_name} does not exist", status=404)
+        
+        # associate the machine with this tunnel id
+        tunnels = machine.cf_tunnels if machine.cf_tunnels else []
+        found = False
+        for tunnel in tunnels:
+            if tunnel.get("id") == tunnel_id:
+                found = True
+                break
+        if not found:
+            tunnels.append({"id": tunnel_id, "name": name})
+        machine.cf_tunnels = tunnels
+        machine.save()
+
+        return redirect(request.META.get("HTTP_REFERER", reverse("tunnels")))    
+    else:
+        return HttpResponse("method not allowed", status=405)
+
+def remove_tunnel(request, machine_name, tunnel_id):
+    if request.method == "POST":
+        try:
+            machine = Machine.objects.get(name=machine_name)
+        except Machine.DoesNotExist:
+            return HttpResponse(f"machine {machine_name} does not exist", status=404)
+        
+        # remove the tunnel id from the machine's cf_tunnels
+        tunnels = machine.cf_tunnels if machine.cf_tunnels else []
+        tunnels = [tunnel for tunnel in tunnels if tunnel.get("id") != tunnel_id]
+        machine.cf_tunnels = tunnels
+        machine.save()
+        
+        return redirect(request.META.get("HTTP_REFERER", reverse("tunnels")))
+    else:
+        return HttpResponse("method not allowed", status=405)
