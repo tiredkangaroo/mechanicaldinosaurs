@@ -18,115 +18,146 @@
       #vm-actions button {
         padding: 0.45rem 1.2rem;
       }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+      }
+      .subpage {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+        margin-bottom: 1rem;
+      }
+      main {
+        width: 100%;
+        height: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+      }
     </style>
   </head>
   <body>
-    <h1 style="text-align: center; font-weight: normal"><b>{{ vm.config.name }}</b> on <b>{{ machine.name }}</b></h1>
-    <div style="display: flex; justify-content: center; align-items: center; gap: 9px">
-      <div class="status-indicator status-{{ vm.status }}"></div>
-      {{ vm.status }}
-    </div>
-    <div id="vm-actions">
-      {% if vm.status == 'running' %}
-      <form method="post" action="{% url 'vm_stop' machine.name vm.config.name %}">
-        {% csrf_token %}
-        <input type="hidden" name="force" value="false" />
-        <button type="submit">graceful stop</button>
-      </form>
-      <form method="post" action="{% url 'vm_stop' machine.name vm.config.name %}">
-        {% csrf_token %}
-        <input type="hidden" name="force" value="true" />
-        <button type="submit">force stop</button>
-      </form>
-      <!-- im not going to add graceful vs forceful restart just yet -->
-      <form method="post" action="{% url 'vm_restart' machine.name vm.config.name %}">
-        {% csrf_token %}
-        <input type="hidden" name="force" value="false" />
-        <button type="submit">restart</button>
-      </form>
-      {% else %}
-      <form method="post" action="{% url 'vm_start' machine.name vm.config.name %}">
-        {% csrf_token %}
-        <button type="submit">start</button>
-      </form>
-      {% endif %}
-      <form method="post" action="{% url 'vm_delete' machine.name vm.config.name %}">
-        {% csrf_token %}
-        <button type="submit" class="button-dangerous">delete</button>
-      </form>
-    </div>
-    {% if error %}
-    <div class="error-flash" style="margin-top: 12px; margin-bottom: 3px">
-      {{ error }}
-      <button onclick="window.location.href='{% url 'vm_detail' machine.name vm.config.name %}'">dismiss</button>
-    </div>
-    {% endif %}
-    <div
-      style="
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        gap: 6px;
-        margin-top: 12px;
-      "
-    >
-      <h2>info</h2>
-      <div style="display: flex; flex-direction: column; gap: 6px; margin: 0">
-        <div><b>vCPUs:</b> {{ vm.config.vcpus }}</div>
-        {% if vm.status == 'running' %}
-        <div><b>memory usage:</b> {{ vm.memory_used_mib }} MiB/{{ vm.config.memory_mib }} MiB</div>
-        {% else %}
-        <div><b>memory:</b> {{ vm.config.memory_mib }} MiB</div>
-        {% endif %}
-        <div><b>disk usage:</b> {{ vm.disk_used_gib }} GiB/{{ vm.config.disk_gib }} GiB</div>
-        <div><b>graphics type:</b> {{ vm.config.graphics_type }}</div>
-        <div><b>boot file:</b> {{ vm.config.boot_file }}</div>
+    <main>
+      <div class="subpage">
+        <img src="{% static 'vm-box.png' %}" width="200px" />
+        <h1 style="text-align: center; font-weight: normal">
+          <b>{{ vm.config.name }}</b> on
+          <a href="{% url 'machine_detail' machine.name %}" style="color: black"><b>{{ machine.name }}</b></a>
+        </h1>
+        <div style="display: flex; justify-content: center; align-items: center; gap: 9px">
+          <div class="status-indicator status-{{ vm.status }}"></div>
+          {{ vm.status }}
+        </div>
+        <div id="vm-actions">
+          {% if vm.status == 'running' %}
+          <form method="post" action="{% url 'vm_stop' machine.name vm.config.name %}">
+            {% csrf_token %}
+            <input type="hidden" name="force" value="false" />
+            <button type="submit">graceful stop</button>
+          </form>
+          <form method="post" action="{% url 'vm_stop' machine.name vm.config.name %}">
+            {% csrf_token %}
+            <input type="hidden" name="force" value="true" />
+            <button type="submit">force stop</button>
+          </form>
+          <!-- im not going to add graceful vs forceful restart just yet -->
+          <form method="post" action="{% url 'vm_restart' machine.name vm.config.name %}">
+            {% csrf_token %}
+            <input type="hidden" name="force" value="false" />
+            <button type="submit">restart</button>
+          </form>
+          {% else %}
+          <form method="post" action="{% url 'vm_start' machine.name vm.config.name %}">
+            {% csrf_token %}
+            <button type="submit">start</button>
+          </form>
+          {% endif %}
+          <form method="post" action="{% url 'vm_delete' machine.name vm.config.name %}">
+            {% csrf_token %}
+            <button type="submit" class="button-dangerous">delete</button>
+          </form>
+        </div>
       </div>
-    </div>
-    <div
-      style="
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        gap: 6px;
-        margin-top: 12px;
-      "
-    >
-      <div style="display: flex; align-items: center; gap: 9px; margin: 0">
-        <h2>remote sessions</h2>
-        {% if vm.status == 'running' %}
-        <form method="post" action="{% url 'vm_connect' machine.name vm.config.name %}">
-          {% csrf_token %}
-          <button type="submit">new session</button>
-        </form>
+      <div class="subpage">
+        {% if error %}
+        <div class="error-flash" style="margin-top: 12px; margin-bottom: 3px">
+          {{ error }}
+          <button onclick="window.location.href='{% url 'vm_detail' machine.name vm.config.name %}'">dismiss</button>
+        </div>
         {% endif %}
-      </div>
-      {% if sessions %}
-      <ul style="margin: 0">
-        {% for session in sessions %}
-        <li style="margin: 0">
-          <div style="display: flex; align-items: center; gap: 9px; margin: 0">
-            <h3>Session: {{ session.session_id }}</h3>
-            <form
-              method="post"
-              action="{% url 'vm_disconnect' machine.name vm.config.name session.session_id %}"
-              style="display: inline"
-            >
-              {% csrf_token %}
-              <input type="hidden" name="session_uuid" value="{{ session.session_id }}" />
-              <button type="submit">{% if session.claimed %}disconnect{% else %}delete{% endif %}</button>
-            </form>
+        <div
+          style="
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+            margin-top: 12px;
+          "
+        >
+          <h2>info</h2>
+          <div style="display: flex; flex-direction: column; gap: 6px; margin: 0">
+            <div><b>vCPUs:</b> {{ vm.config.vcpus }}</div>
+            {% if vm.status == 'running' %}
+            <div><b>memory usage:</b> {{ vm.memory_used_mib }} MiB/{{ vm.config.memory_mib }} MiB</div>
+            {% else %}
+            <div><b>memory:</b> {{ vm.config.memory_mib }} MiB</div>
+            {% endif %}
+            <div><b>disk usage:</b> {{ vm.disk_used_gib }} GiB/{{ vm.config.disk_gib }} GiB</div>
+            <div><b>graphics type:</b> {{ vm.config.graphics_type }}</div>
+            <div><b>boot file:</b> {{ vm.config.boot_file }}</div>
           </div>
+        </div>
+        <div
+          style="
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+            margin-top: 12px;
+          "
+        >
+          <div style="display: flex; align-items: center; gap: 9px; margin: 0">
+            <h2>remote sessions</h2>
+            {% if vm.status == 'running' %}
+            <form method="post" action="{% url 'vm_connect' machine.name vm.config.name %}">
+              {% csrf_token %}
+              <button type="submit">new session</button>
+            </form>
+            {% endif %}
+          </div>
+          {% if sessions %}
+          <ul style="margin: 0">
+            {% for session in sessions %}
+            <li style="margin: 0">
+              <div style="display: flex; align-items: center; gap: 9px; margin: 0">
+                <h3>Session: {{ session.session_id }}</h3>
+                <form
+                  method="post"
+                  action="{% url 'vm_disconnect' machine.name vm.config.name session.session_id %}"
+                  style="display: inline"
+                >
+                  {% csrf_token %}
+                  <input type="hidden" name="session_uuid" value="{{ session.session_id }}" />
+                  <button type="submit">{% if session.claimed %}disconnect{% else %}delete{% endif %}</button>
+                </form>
+              </div>
 
-          <p><b>Started:</b> {{ session.created_at }} UTC</p>
-          <b>Claimed by:</b> {{ session.claimed_by }} {% endfor %}
-        </li>
-      </ul>
-      {% else %}
-      <p style="margin: 0">No active sessions for {{ vm.config.name }}.</p>
-      {% endif %}
-    </div>
+              <p><b>Started:</b> {{ session.created_at }} UTC</p>
+              <b>Claimed by:</b> {{ session.claimed_by }} {% endfor %}
+            </li>
+          </ul>
+          {% else %}
+          <p style="margin: 0">No active sessions for {{ vm.config.name }}.</p>
+          {% endif %}
+        </div>
+      </div>
+    </main>
   </body>
 </html>

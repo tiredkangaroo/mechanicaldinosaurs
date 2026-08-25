@@ -19,7 +19,7 @@
       .deployments,
       .automations {
         padding: 0px 20px 20px 20px;
-        border-bottom: 2px solid #ddd;
+        border-bottom: 1px solid #ddd;
       }
       .machines-title,
       .vms-title,
@@ -149,7 +149,7 @@
     </style>
   </head>
   <body style="width: 75%; margin: auto; padding-top: 20px; padding-bottom: 20px">
-    <div style="display: flex; flex-direction: row; align-items: center; justify-content: space-between; padding: 20px; border-bottom: 4px solid #ddd">
+    <div style="display: flex; flex-direction: row; align-items: center; justify-content: space-between; padding: 20px; border-bottom: 2px solid #ddd">
       <img src="{% static 'favicon.png' %}" width="100rem" height="100rem" />
       <div style="display: flex; flex-direction: flex; justify-content: center; align-items: end; gap: 14px">
         <a href="{% url 'tunnels' %}" class="tunnels-link" title="view network exposure">
@@ -238,6 +238,7 @@
                   <div class="status-indicator status-{{ vm.status|lower }}" title="{{ vm.status }}"></div>
                 <h2 style="margin: 0;" class="machine-name">{{ vm.config.name }}</h2>
               </div>
+              <pre>{{ vm.config.boot_file }}</pre>
             </div>
 
             <!-- <div
