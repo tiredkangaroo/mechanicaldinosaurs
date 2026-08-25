@@ -119,7 +119,18 @@
         min-width: 75px;
         text-align: center;
         margin-right: 10px;
-      } 
+      }
+      .machine-link {
+        text-decoration: none; color: inherit; width: min-content; padding: 18px 10px; border-radius: 8px; background-color: var(--secondary-color); outline: 2px solid var(--primary-color); transition: all 0.2s ease-in-out; 
+        color: var(--primary-color);
+      }
+      .machine-link:hover {
+        outline: 2px solid var(--primary-color);
+        transform: scale(1.08);
+      }
+      .machine-name {
+        margin: 0;
+      }
       code {
         /* background-color: #cfcfcf; */
         padding: 2px 4px;
@@ -172,8 +183,20 @@
 
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 20px; margin-top: 10px; ">
           {% for machine in machines %}
-          <a href="{% url 'machine_detail' machine.name %}" style="text-decoration: none; color: inherit">
-            <div
+          <a href="{% url 'machine_detail' machine.name %}" class="machine-link">
+            <div style="display: flex; flex-direction: column; gap: 4px; justify-content: center; align-items: center">
+              <img src="{% static 'server.png' %}" width="128px" style="border-radius: 8px; object-fit: cover" />
+              <div style="display: flex; flex-direction: row; gap: 12px; align-items: center">
+                <h2 style="margin: 0;" class="machine-name">{{ machine.name }}</h2>
+                <form method="POST" action="{% url 'machine_delete' machine.name %}">
+                  {% csrf_token %}
+                  <button class="button-dangerous" style="margin-top: 6px;">
+                    delete
+                  </button>
+                </form>
+              </div>
+            </div>
+            <!-- <div
               style="
                 padding: 18px 24px;
                 background-color: var(--secondary-color);
@@ -188,13 +211,7 @@
                 <h2 style="margin: 0; color: var(--primary-color)">{{ machine.name }}</h2>
               </div>
               <p style="color: var(--md-gray); margin-top: 8px">{{ machine.hostport }}</p>
-                <form method="POST" action="{% url 'machine_delete' machine.name %}">
-                  {% csrf_token %}
-                  <button class="button-dangerous">
-                    delete
-                  </button>
-                </form>
-            </div>
+            </div> -->
           </a>
           {% empty %}
           <p style="margin: 0">No machines found.</p>
