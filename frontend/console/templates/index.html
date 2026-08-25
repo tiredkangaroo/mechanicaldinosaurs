@@ -8,6 +8,12 @@
     <link rel="stylesheet" href="{% static 'root.css' %}" />
     <link rel="icon" type="image/x-icon" href="{% static 'favicon.png' %}">
     <style>
+      .tunnels-link, .passkeys-link {
+        transition: all 0.2s ease-in-out;
+      }
+      .tunnels-link:hover, .passkeys-link:hover {
+        transform: scale(1.08);
+      }
       .machines,
       .vms,
       .deployments,
@@ -145,16 +151,12 @@
   <body style="width: 75%; margin: auto; padding-top: 20px; padding-bottom: 20px">
     <div style="display: flex; flex-direction: row; align-items: center; justify-content: space-between; padding: 20px; border-bottom: 4px solid #ddd">
       <img src="{% static 'favicon.png' %}" width="100rem" height="100rem" />
-      <div style="display: flex; flex-direction: flex; justify-content: center; align-items: end; gap: 10px">
-        <a href="{% url 'tunnels' %}">
-          <button>
-            view network exposure
-          </button>
+      <div style="display: flex; flex-direction: flex; justify-content: center; align-items: end; gap: 14px">
+        <a href="{% url 'tunnels' %}" class="tunnels-link" title="view network exposure">
+            <img src="{% static 'networking_icon.png' %}" width="64px" style="margin-right: 6px" />
         </a>
-        <a href="{% url 'passkeys_mgmt' %}">
-          <button>
-            manage passkeys
-          </button>
+        <a href="{% url 'passkeys_mgmt' %}" class="passkeys-link" title="manage passkeys">
+          <img src="{% static 'key.png' %}" width="64px" style="margin-right: 6px" />
         </a>
         <a href="{% url 'logout' %}" style="text-decoration: none; color: inherit; margin: 0">
           <button class="button-dangerous">logout</button>
