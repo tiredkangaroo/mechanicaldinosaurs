@@ -255,7 +255,7 @@
         {% endif %}
         <div class="section-title">
           <h2>active shell sessions</h2>
-          <a href="{% url 'shell' machine_name=machine.name %}"><button>open</button></a>
+          <a href="{% url 'shell' machine_name=machine.name %}" target="_blank"><button>open</button></a>
         </div>
         {% if machine.active_shell_sessions.error %}
         <div class="error-flash">
