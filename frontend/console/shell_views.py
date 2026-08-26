@@ -1,5 +1,5 @@
 from django.http import HttpResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from .models import Machine, ProxySession
 import hashlib
@@ -10,6 +10,7 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from os import environ
 import uuid
 from django.conf import settings
+from .disconnect_session import disconnect_session
 
 @login_required
 def shell(request, machine_name):
@@ -44,3 +45,13 @@ def shell(request, machine_name):
     return render(request, 'shell.html', {
         "proxy_hostport": settings.PROXY_HOSTPORT,
     })
+
+def kill_shell_session(request, machine_name, session_id): 
+    try:
+        session = ProxySession.objects.get(machine=Machine.objects.get(name=machine_name), session_id=session_id)
+    except ProxySession.DoesNotExist:
+        return HttpResponse("session not found", status=404)
+    
+    session.delete() # delete the session from the database
+    disconnect_session(session_id)
+    return redirect('machine_detail', machine_name=machine_name)

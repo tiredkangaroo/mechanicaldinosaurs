@@ -1,3 +1,4 @@
+{% load id_filters %}
 <!doctype html>
 <html lang="en">
   <head>
@@ -264,17 +265,22 @@
         </div>
         {% else %}
         <div class="active-shell-sessions-wrapper">
-          <ul>
-            {% for session in machine.active_shell_sessions %}
-            <li class="session-card">
-              <b style="font-size: 1.2em">Session ({{ session.session_id }})</b><br /><br />
-              <b>Started:</b> {{ session.created_at }} UTC<br />
-              <b>Claimed by:</b> {{ session.claimed_by }}
-            </li>
-            {% empty %}
-            <p style="text-align: center; opacity: 0.7; margin: 0">no active shell sessions found on this machine.</p>
-            {% endfor %}
-          </ul>
+          {% for item in machine.active_shell_sessions %}
+          <div class="vm-card">
+            <img src="{% static 'shell-icon.png' %}" width="100px" />
+            <h3 style="font-size: 1.4rem; text-align: center">{{ item.session_id | short_id }}</h3>
+            <pre>{{ item.claimed_by }}</pre>
+            <form
+              method="POST"
+              action="{% url 'kill_shell_session' machine_name=machine.name session_id=item.session_id %}"
+            >
+              {% csrf_token %}
+              <button class="button-dangerous">kill</button>
+            </form>
+          </div>
+          {% empty %}
+          <p style="text-align: center; opacity: 0.7; margin: 0">no virtual machines found on this machine.</p>
+          {% endfor %}
         </div>
         {% endif %}
 
