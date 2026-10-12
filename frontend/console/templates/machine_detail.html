@@ -254,6 +254,8 @@
           {% endfor %}
         </div>
         {% endif %}
+        <!--  -->
+        {% if proxy_enabled %}
         <div class="section-title">
           <h2>active shell sessions</h2>
           <a href="{% url 'shell' machine_name=machine.name %}" target="_blank"><button>open</button></a>
@@ -282,7 +284,7 @@
           <p style="text-align: center; opacity: 0.7; margin: 0">no virtual machines found on this machine.</p>
           {% endfor %}
         </div>
-        {% endif %}
+        {% endif %} {% endif %}
 
         <div style="text-align: center">
           <h2>tunnels</h2>

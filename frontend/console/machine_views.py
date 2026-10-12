@@ -80,7 +80,8 @@ def machine_detail(request, machine_name):
     except Exception as e:
         account_tunnels = {'error': str(e)}
 
-    return render(request, 'machine_detail.html', {'machine': machine, 'account_tunnels': account_tunnels})
+    proxy_enabled = settings.PROXY_HOSTPORT is not None and len(settings.PROXY_HOSTPORT) > 0
+    return render(request, 'machine_detail.html', {'machine': machine, 'account_tunnels': account_tunnels, 'proxy_enabled': proxy_enabled})
 
 @login_required
 def machine_delete(request, machine_name):

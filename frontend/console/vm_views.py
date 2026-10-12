@@ -76,8 +76,9 @@ def vm_detail(request, machine_name, vm_name):
         sessions = ProxySession.objects.filter(proxy_url=proxy_url_for_vm(machine, vm_name), machine=machine)
     except Exception as e:
         return HttpResponse(f"error fetching sessions: {str(e)}", status=503)
-
-    return render(request, 'vm_detail.html', {'machine': machine, 'vm': vm, 'sessions': sessions, 'error': request.GET.get('error', '')})
+    
+    proxy_enabled = settings.PROXY_HOSTPORT is not None and len(settings.PROXY_HOSTPORT) > 0
+    return render(request, 'vm_detail.html', {'machine': machine, 'vm': vm, 'sessions': sessions, 'error': request.GET.get('error', ''), 'proxy_enabled': proxy_enabled})
 
 @login_required
 def vm_start(request, machine_name, vm_name):

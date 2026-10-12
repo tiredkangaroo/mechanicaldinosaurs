@@ -123,6 +123,7 @@
             margin-top: 12px;
           "
         >
+          {% if proxy_enabled %}
           <div style="display: flex; align-items: center; gap: 9px; margin: 0">
             <h2>remote sessions</h2>
             {% if vm.status == 'running' %}
@@ -132,6 +133,8 @@
             </form>
             {% endif %}
           </div>
+          {% endif %}
+          <!--  -->
           {% if sessions %}
           <ul style="margin: 0">
             {% for session in sessions %}

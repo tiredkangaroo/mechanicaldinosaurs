@@ -19,6 +19,9 @@ def shell(request, machine_name):
     except Machine.DoesNotExist:
         return HttpResponse("machine not found", status=404)
     
+    if not settings.PROXY_HOSTPORT:
+        return HttpResponse("the proxy isn't enabled in the console - shell connection cannot be made", status=500)
+    
     # # get a derived key for signing purposes
     # hkdf = HKDF(
     #     algorithm=hashes.SHA256(),
