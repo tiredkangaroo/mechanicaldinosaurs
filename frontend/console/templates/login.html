@@ -7,13 +7,6 @@
     <title>login</title>
     <link rel="stylesheet" href="{% static 'root.css' %}" />
     <style>
-      #passkeyButton {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 12px;
-      }
       #loginForm {
         display: flex;
         flex-direction: column;
@@ -46,22 +39,8 @@
         {% if request.GET.next %}
         <input type="hidden" name="next" value="{{ request.GET.next }}" />
         {% endif %}
-        <input type="hidden" name="passkeys" id="passkeys" />
         <button type="submit">Login</button>
       </form>
-      <br />
-      <button id="passkeyButton" type="button" onclick="authn('loginForm')">
-        login with passkey
-      </button>
     </div>
-    {%include 'passkeys/passkeys.js' with allow_password=True %}
-    <script>
-      function no_credentials_found() {
-        console.log("no credentials found");
-        var searchParams = new URLSearchParams(window.location.search);
-        searchParams.set("next", "{% url 'passkeys:enroll' %}");
-        window.location.search = searchParams.toString();
-      }
-    </script>
   </body>
 </html>

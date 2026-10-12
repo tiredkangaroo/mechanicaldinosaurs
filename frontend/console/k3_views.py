@@ -5,7 +5,6 @@ import requests, math, uuid, socket
 from dateutil import parser 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
-from passkeys.models import UserPasskey
 from os import environ, path
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException

@@ -67,15 +67,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'passkeys',
 ]
-
-AUTHENTICATION_BACKENDS = [
-    'passkeys.backend.PasskeyModelBackend',
-]
-
-FIDO_SERVER_ID = "localhost" 
-FIDO_SERVER_NAME = "mechanical dinosaurs"
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

@@ -12,7 +12,6 @@ urlpatterns = [
     path('', views.index, name='index'),
     
     path('login/', auth_views.login_view, name='login'),
-    path('passkeys-mgmt', auth_views.passkeys_mgmt, name='passkeys_mgmt'),
     path('logout/', auth_views.logout_view, name='logout'),
 
     path('machines/', machine_views.machines, name='machines'),

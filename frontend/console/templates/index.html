@@ -8,10 +8,10 @@
     <link rel="stylesheet" href="{% static 'root.css' %}" />
     <link rel="icon" type="image/x-icon" href="{% static 'favicon.png' %}">
     <style>
-      .tunnels-link, .passkeys-link {
+      .tunnels-link {
         transition: all 0.2s ease-in-out;
       }
-      .tunnels-link:hover, .passkeys-link:hover {
+      .tunnels-link:hover {
         transform: scale(1.08);
       }
       .multiple-cards {
@@ -160,9 +160,6 @@
       <div style="display: flex; flex-direction: flex; justify-content: center; align-items: end; gap: 14px">
         <a href="{% url 'tunnels' %}" class="tunnels-link" title="view network exposure">
             <img src="{% static 'networking_icon.png' %}" width="64px" style="margin-right: 6px" />
-        </a>
-        <a href="{% url 'passkeys_mgmt' %}" class="passkeys-link" title="manage passkeys">
-          <img src="{% static 'key.png' %}" width="64px" style="margin-right: 6px" />
         </a>
         <a href="{% url 'logout' %}" style="text-decoration: none; color: inherit; margin: 0">
           <button class="button-dangerous">logout</button>

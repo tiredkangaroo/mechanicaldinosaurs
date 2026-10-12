@@ -5,7 +5,6 @@ import requests, math, uuid, socket
 from dateutil import parser 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
-from passkeys.models import UserPasskey
 from os import environ, path
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
@@ -35,8 +34,3 @@ def login_view(request):
 def logout_view(request):
     logout(request)
     return redirect('login')
-
-@login_required
-def passkeys_mgmt(request):
-    keys = UserPasskey.objects.filter(user=request.user)
-    return render(request, 'passkeys_mgmt.html', {'keys': keys})
