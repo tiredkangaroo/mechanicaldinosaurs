@@ -359,7 +359,6 @@ def delete_deployment(request, namespace, deployment_name):
             except ApiException as e:
                 print(f"error deleting service for deployment: {str(e)}")
         
-        return redirect('index')
     except ApiException as e:
         return HttpResponse(f"error deleting deployment: {str(e)}", status=503)
     

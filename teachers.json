@@ -1,0 +1,21 @@
+[
+  {
+    "schoolName": "abc",
+    "lat": 34.0522,
+    "long": -118.2437,
+    "csPeople": [
+      {
+        "name": "John Doe",
+        "role": "Teacher",
+        "email": "johndoe@example.com",
+        "evidence": "https://example.com/johndoe"
+      },
+      {
+        "name": "Jane Smith",
+        "role": "Club Advisor",
+        "email": "janesmith@example.com",
+        "evidence": "https://example.com/janesmith"
+      }
+    ]
+  }
+]
